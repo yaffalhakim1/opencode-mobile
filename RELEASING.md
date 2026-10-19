@@ -242,6 +242,7 @@ pwsh -File scripts/run-tools-flow.ps1          # tools + the question card
 | Flow | What it proves |
 | --- | --- |
 | `pair.yaml` | Pasting a pairing link stores a token and lands on the list |
+| `streaming.yaml` | A reply appears on its own, with no refresh — the regression for dropped deltas |
 | `conversation.yaml` | Two real prompts stream, both survive a refresh, back works |
 | `tools.yaml` | A tool card expands to Arguments/Result; the question card renders and answers |
 

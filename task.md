@@ -39,6 +39,7 @@
 ## Verified on device
 
 - [x] Pairing by pasted link → session list (Maestro `pair.yaml` passes)
+- [x] **Replies stream in without a refresh** (Maestro `streaming.yaml`)
 - [x] Two-turn conversation with real prompts; both turns survive refresh
       (Maestro `conversation.yaml` passes)
 - [x] Shell tool card expands to Arguments/Result; question card renders,

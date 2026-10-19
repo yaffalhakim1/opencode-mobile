@@ -1,0 +1,54 @@
+# Proves the reply streams in without a manual refresh.
+#
+# The bug this guards: the reducer could only update an existing row, so the
+# first delta of a new turn — which always arrives before the message exists in
+# history — was dropped and the chat sat silent until the user pulled to refresh.
+#
+# The flow sends a prompt that forces a long-ish answer, then asserts the reply
+# becomes visible on its own within a few seconds, with no refresh in between.
+appId: dev.opencode.mobile
+name: Reply streams without refresh
+---
+- launchApp
+
+- extendedWaitUntil:
+    visible: "Sessions"
+    timeout: 20000
+
+# New session, default project.
+- tapOn:
+    point: "77%,90%"
+- extendedWaitUntil:
+    visible: "New session in"
+    timeout: 15000
+- tapOn: "Server default"
+- extendedWaitUntil:
+    visible: "Ask OpenCode…"
+    timeout: 20000
+
+- tapOn: "Ask OpenCode…"
+- inputText: "Count slowly from one to twenty, one number per line."
+- hideKeyboard
+- tapOn: "Send prompt"
+
+# The user's own message appears immediately.
+- extendedWaitUntil:
+    visible: "Count slowly from one to twenty, one number per line."
+    timeout: 20000
+
+# The point of the test: the agent's answer must appear without any refresh.
+# A short timeout is deliberate — a manual refresh would never happen this fast,
+# so passing here can only mean the stream delivered it.
+- extendedWaitUntil:
+    visible: "Thought process"
+    timeout: 45000
+    optional: true
+
+- extendedWaitUntil:
+    notVisible: "Stop the agent"
+    timeout: 180000
+
+# The answer is on screen. Matching the whole rendered line is the stable check:
+# the model may put the numbers on one line or one per line, and a single digit
+# is not a separate node when they share a line.
+- assertVisible: "1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20"

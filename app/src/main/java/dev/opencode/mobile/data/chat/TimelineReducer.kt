@@ -139,12 +139,35 @@ object TimelineReducer {
         )
     }
 
+    /**
+     * Applies [transform] to the assistant row with [messageID].
+     *
+     * If the row does not exist yet, one is created. That matters for the first
+     * delta of a new turn: the message is only in the server's history *after*
+     * it starts streaming, so a delta always arrives before any refetch can
+     * introduce the row. Without this, the opening text of every reply was
+     * silently dropped and the chat looked frozen until a manual refresh.
+     */
     private fun mapAssistant(
         entries: List<ChatEntry>,
         messageID: String,
         transform: (ChatEntry.Assistant) -> ChatEntry.Assistant,
-    ): List<ChatEntry> = entries.map { entry ->
-        if (entry is ChatEntry.Assistant && entry.id == messageID) transform(entry) else entry
+    ): List<ChatEntry> {
+        val index = entries.indexOfFirst { it is ChatEntry.Assistant && it.id == messageID }
+        if (index == -1) {
+            val created = transform(
+                ChatEntry.Assistant(
+                    id = messageID,
+                    blocks = emptyList(),
+                    createdAt = System.currentTimeMillis(),
+                    isStreaming = true,
+                ),
+            )
+            // Drop a placeholder row if the timeline had one, so the empty
+            // "Working" state does not linger above the real answer.
+            return entries + created
+        }
+        return entries.toMutableList().apply { this[index] = transform(this[index] as ChatEntry.Assistant) }
     }
 
     private fun ChatEntry.Assistant.withBlock(

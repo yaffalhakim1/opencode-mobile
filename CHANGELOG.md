@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.3]
+
+### Android
+
+- **Fixed: replies appeared only after you pulled to refresh.** Sending a message
+  showed your own text and then nothing — the agent was answering, but the phone
+  stayed silent until you refreshed, so the app looked broken. The live updates
+  were arriving and being discarded: the first words of a reply always arrive
+  before the message they belong to exists, and the app only knew how to add to a
+  message it already had. Replies now appear as they are written.
+
 ## [1.0.2]
 
 ### Android
