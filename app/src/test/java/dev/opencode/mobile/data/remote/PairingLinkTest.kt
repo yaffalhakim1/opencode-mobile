@@ -10,6 +10,66 @@ import org.junit.Test
  */
 class PairingLinkTest {
 
+    // The desktop app renders the QR from
+    //   JSON.stringify({ code, urls: [url] })
+    // and puts a /auth/connect/ URL on the Copy link button. Both must work.
+
+    @Test
+    fun `qr json payload is parsed`() {
+        val link = PairingLink.parse(
+            """{"code":"gcoBMy4veHbiHBdW3_Xg5Q","urls":["https://2ca2f22f41aa933d.sscebj6tg3no.opentunnel.xyz"]}""",
+        )
+        assertEquals("https://2ca2f22f41aa933d.sscebj6tg3no.opentunnel.xyz", link?.baseUrl)
+        assertEquals("gcoBMy4veHbiHBdW3_Xg5Q", link?.code)
+    }
+
+    @Test
+    fun `qr json with several urls prefers https`() {
+        val link = PairingLink.parse(
+            """{"code":"abc","urls":["http://127.0.0.1:4096","https://tunnel.example"]}""",
+        )
+        assertEquals("https://tunnel.example", link?.baseUrl)
+        assertEquals("abc", link?.code)
+    }
+
+    @Test
+    fun `qr json with surrounding whitespace is tolerated`() {
+        val link = PairingLink.parse("""  {"code":"abc","urls":["https://host.dev"]}  """)
+        assertEquals("https://host.dev", link?.baseUrl)
+        assertEquals("abc", link?.code)
+    }
+
+    @Test
+    fun `qr json with unknown extra fields still parses`() {
+        val link = PairingLink.parse(
+            """{"code":"abc","urls":["https://host.dev"],"expiresIn":300}""",
+        )
+        assertEquals("abc", link?.code)
+    }
+
+    @Test
+    fun `qr json without a url is rejected`() {
+        assertNull(PairingLink.parse("""{"code":"abc"}"""))
+        assertNull(PairingLink.parse("""{"code":"abc","urls":[]}"""))
+    }
+
+    @Test
+    fun `qr json without a code is rejected`() {
+        assertNull(PairingLink.parse("""{"urls":["https://host.dev"]}"""))
+    }
+
+    @Test
+    fun `malformed json does not throw`() {
+        assertNull(PairingLink.parse("""{"code":"""))
+    }
+
+    @Test
+    fun `copy link url is still parsed`() {
+        val link = PairingLink.parse("https://host.dev/auth/connect/abc123")
+        assertEquals("https://host.dev", link?.baseUrl)
+        assertEquals("abc123", link?.code)
+    }
+
     @Test
     fun `plain tunnel link splits into host and code`() {
         val link = PairingLink.parse(

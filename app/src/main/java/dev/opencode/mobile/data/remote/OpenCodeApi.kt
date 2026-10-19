@@ -78,9 +78,15 @@ class OpenCodeApi(
         sessionID: String,
         text: String,
         files: List<PromptFileDto> = emptyList(),
+        /**
+         * `steer` interjects into the running turn; `queue` holds the prompt until
+         * the current turn finishes. Null lets the server decide.
+         */
+        delivery: String? = null,
     ) {
         val payload = buildJsonObject {
             put("text", text)
+            if (!delivery.isNullOrBlank()) put("delivery", delivery)
             if (files.isNotEmpty()) {
                 putJsonArray("files") {
                     files.forEach { file ->
