@@ -209,7 +209,7 @@ adb uninstall dev.opencode.mobile
 adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
-### Checking pairing by hand
+### Checking the QR scan by hand
 
 Pairing is a user action and cannot be automated end to end without a device
 holding a code. To exercise the scan path on an emulator, point its camera at a
@@ -224,6 +224,42 @@ emulator -avd <name> -camera-back "imagefile:/path/to/qr.png"
 The desktop app encodes `{"code":…,"urls":[…]}` — **JSON, not a URL**. Only its
 "Copy link" button produces a `/auth/connect/…` URL. Both must parse; a change to
 `PairingLink` should keep a test for each.
+
+### Maestro flows
+
+`maestro/` holds the device flows. Maestro is installed at
+`C:\Users\yafit\maestro\maestro\bin\maestro.bat` (not on `PATH`).
+
+```powershell
+$maestro = "C:\Users\yafit\maestro\maestro\bin\maestro.bat"
+
+& $maestro test maestro/                       # every flow
+& $maestro test maestro/conversation.yaml      # real prompts, refresh, back
+& $maestro test maestro/pair.yaml -e PAIRING_LINK=https://host/auth/connect/CODE
+pwsh -File scripts/run-tools-flow.ps1          # tools + the question card
+```
+
+| Flow | What it proves |
+| --- | --- |
+| `pair.yaml` | Pasting a pairing link stores a token and lands on the list |
+| `conversation.yaml` | Two real prompts stream, both survive a refresh, back works |
+| `tools.yaml` | A tool card expands to Arguments/Result; the question card renders and answers |
+
+Two things make these flows fussier than they look, and both have cost time:
+
+- **`hideKeyboard` presses BACK**, which this app treats as "go up a screen". A
+  flow that hides the keyboard mid-session navigates away instead. Use it only
+  where leaving the screen is harmless, and prefer tapping a visible target.
+- **Maestro matches whole nodes, not substrings.** An answer rendered inside one
+  text node cannot be matched by a word from the middle of it. Assert on the
+  user's own message or on discrete labels ("Result", "Arguments").
+
+`tools.yaml` needs `scripts/run-tools-flow.ps1` because the `question` tool is a
+**form the server holds open**, and whether an agent calls it depends on that
+agent's toolset. The script creates a session, runs a shell prompt, injects a
+form, and passes the generated title to the flow. The flow then opens that
+session by title — the server renames a session after its first turn, so the
+original prompt text is not a stable selector.
 
 ## What a real failure looks like
 

@@ -2,6 +2,7 @@ package dev.opencode.mobile.data.remote.dto
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 
 @Serializable
 data class DataEnvelope<T>(
@@ -68,6 +69,20 @@ data class PromptAcceptedDto(
     val id: String = "",
     val text: String = "",
 )
+
+/**
+ * One page of session history.
+ *
+ * [olderCursor] walks backwards in time. It is opaque and must be passed back
+ * **without** `order`, which the server rejects when combined.
+ */
+data class MessagePage(
+    val messages: List<JsonObject>,
+    val olderCursor: String?,
+)
+
+/** The server rejects a larger page than this. */
+const val MAX_MESSAGE_PAGE = 200
 
 /** Envelope of one server-sent event. [data] stays raw so parsing stays tolerant. */
 @Serializable

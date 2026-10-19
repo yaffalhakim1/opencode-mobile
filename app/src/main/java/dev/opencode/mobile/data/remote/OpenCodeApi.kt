@@ -4,6 +4,11 @@ import dev.opencode.mobile.core.net.OpenCodeException
 import dev.opencode.mobile.data.remote.dto.AgentDto
 import dev.opencode.mobile.data.remote.dto.AgentsPage
 import dev.opencode.mobile.data.remote.dto.DataEnvelope
+import dev.opencode.mobile.data.remote.dto.FormDto
+import dev.opencode.mobile.data.remote.dto.FormValueDto
+import dev.opencode.mobile.data.remote.dto.FormsPage
+import dev.opencode.mobile.data.remote.dto.MAX_MESSAGE_PAGE
+import dev.opencode.mobile.data.remote.dto.MessagePage
 import dev.opencode.mobile.data.remote.dto.ModelDto
 import dev.opencode.mobile.data.remote.dto.ModelsPage
 import dev.opencode.mobile.data.remote.dto.PairingSessionDto
@@ -18,6 +23,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -66,13 +74,38 @@ class OpenCodeApi(
             json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(ProjectDto.serializer()), body)
         }
 
-    suspend fun messages(sessionID: String, limit: Int = 200): List<JsonObject> =
-        get("api/session/$sessionID/message", mapOf("limit" to limit.toString(), "order" to "asc")) { body ->
+    /**
+     * One page of history, newest first.
+     *
+     * `order=desc` is only legal on the first page. Every later page passes the
+     * cursor and *no* order — the server rejects the combination — and walks
+     * backwards from there.
+     */
+    suspend fun messagePage(
+        sessionID: String,
+        limit: Int = MAX_MESSAGE_PAGE,
+        cursor: String? = null,
+    ): MessagePage {
+        val query = buildMap {
+            put("limit", limit.coerceAtMost(MAX_MESSAGE_PAGE).toString())
+            if (cursor == null) put("order", "desc") else put("cursor", cursor)
+        }
+        return get("api/session/$sessionID/message", query) { body ->
             val root = json.parseToJsonElement(body) as JsonObject
-            (root["data"] as? JsonArray)
+            val messages = (root["data"] as? JsonArray)
                 ?.mapNotNull { it as? JsonObject }
                 .orEmpty()
+            val next = (root["cursor"] as? JsonObject)
+                ?.get("next")
+                ?.jsonPrimitive
+                ?.contentOrNull
+            MessagePage(messages, next)
         }
+    }
+
+    /** Convenience for callers that only need the first page. */
+    suspend fun messages(sessionID: String, limit: Int = MAX_MESSAGE_PAGE): List<JsonObject> =
+        messagePage(sessionID, limit).messages
 
     suspend fun sendPrompt(
         sessionID: String,
@@ -155,6 +188,39 @@ class OpenCodeApi(
 
     suspend fun deleteSession(sessionID: String) {
         delete("api/session/$sessionID")
+    }
+
+    /**
+     * Forms the agent is waiting on.
+     *
+     * A `question` tool call blocks the turn until one of these is answered, so
+     * this is polled on demand rather than only on stream events.
+     */
+    suspend fun pendingForms(sessionID: String): List<FormDto> =
+        get("api/session/$sessionID/form") { body ->
+            json.decodeFromString(FormsPage.serializer(), body).data
+        }
+
+    /**
+     * Answers a form.
+     *
+     * The body is `{ answer: { <fieldKey>: <value> } }`; the server returns 204
+     * and the blocked turn continues.
+     */
+    suspend fun replyToForm(sessionID: String, formID: String, answer: Map<String, FormValueDto>) {
+        val payload = buildJsonObject {
+            putJsonObject("answer") {
+                answer.forEach { (key, value) ->
+                    when {
+                        value.strings != null -> putJsonArray(key) {
+                            value.strings.forEach { add(it) }
+                        }
+                        else -> put(key, value.string ?: "")
+                    }
+                }
+            }
+        }
+        post("api/session/$sessionID/form/$formID/reply", payload) { }
     }
 
     private suspend fun <T> get(

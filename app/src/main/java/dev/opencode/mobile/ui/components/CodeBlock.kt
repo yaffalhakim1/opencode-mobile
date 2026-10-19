@@ -120,14 +120,16 @@ fun DisclosureRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onToggle)
-                .padding(vertical = 10.dp),
+                // Tight vertical padding: a run of these cards should read as a
+                // compact activity log, not a stack of panels.
+                .padding(vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             leading?.invoke()
             Text(
                 text = title,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -138,7 +140,7 @@ fun DisclosureRow(
                 imageVector = Glyphs.ChevronDown,
                 contentDescription = if (expanded) "Collapse" else "Expand",
                 modifier = Modifier
-                    .size(20.dp)
+                    .size(16.dp)
                     .rotate(rotation),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -203,7 +205,7 @@ fun AgentActivityCard(
                 color = MaterialTheme.extendedColors.cardBorder,
                 shape = MaterialTheme.shapes.medium,
             )
-            .padding(horizontal = 12.dp, vertical = 4.dp),
+            .padding(horizontal = 12.dp, vertical = 2.dp),
     ) {
         content()
     }

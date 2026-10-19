@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.0.2]
+
+### Android
+
+- **Fixed: a long conversation stopped at its beginning.** Opening a session with
+  a lot of history showed the first messages you ever sent and never the newest
+  turn, so the session looked frozen hours in the past. The app was reading
+  history from the start of the conversation and the server only returns a page
+  at a time, so anything past that page was unreachable. Sessions now open at the
+  newest message, and scrolling up loads earlier pages until you reach the start.
+
+- **The agent's questions now appear in the app.** When the agent asks you
+  something, it waits for an answer before continuing — and the phone showed
+  nothing at all, so the session simply looked stuck. Questions now render as a
+  card with their choices, and answering one lets the agent carry on.
+
+- **Task and reasoning cards are more compact.** Smaller labels and tighter
+  spacing, so a run of tool calls reads as an activity log instead of a stack of
+  panels taking a screen each.
+
 ## [1.0.1]
 
 ### Android

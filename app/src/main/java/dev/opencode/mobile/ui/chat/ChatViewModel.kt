@@ -15,6 +15,8 @@ import dev.opencode.mobile.data.remote.EventStream
 import dev.opencode.mobile.data.remote.OpenCodeApi
 import dev.opencode.mobile.data.remote.StreamSignal
 import dev.opencode.mobile.data.remote.dto.PromptFileDto
+import dev.opencode.mobile.data.remote.dto.FormDto
+import dev.opencode.mobile.data.remote.dto.FormValueDto
 import dev.opencode.mobile.data.remote.dto.StreamEventDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -49,6 +51,11 @@ data class ChatUiState(
     val showJumpToBottom: Boolean = false,
     /** Prompts accepted while a turn was running and not yet delivered. */
     val queued: Int = 0,
+    /** Cursor for the next older page, or null when the start is reached. */
+    val olderCursor: String? = null,
+    val loadingOlder: Boolean = false,
+    /** Questions the agent is blocked on. Empty when the turn is not asking. */
+    val forms: List<FormDto> = emptyList(),
 )
 
 class ChatViewModel(
@@ -73,6 +80,7 @@ class ChatViewModel(
         refresh()
         loadCatalog()
         connectStream()
+        refreshForms()
     }
 
     fun onDraftChange(value: String) {
@@ -294,6 +302,31 @@ class ChatViewModel(
         _state.update { it.copy(error = null) }
     }
 
+    /**
+     * Answers a pending question and clears it locally.
+     *
+     * A blocked `question` tool means the turn cannot continue until this
+     * succeeds, so a failure is surfaced rather than swallowed.
+     */
+    fun answerForm(form: FormDto, answer: Map<String, FormValueDto>) {
+        viewModelScope.launch {
+            try {
+                api.replyToForm(sessionID, form.id, answer)
+                _state.update { it.copy(forms = it.forms.filterNot { f -> f.id == form.id }) }
+            } catch (e: Exception) {
+                _state.update { it.copy(error = e.message ?: "Could not send that answer.") }
+            }
+        }
+    }
+
+    /** Forms are only listed while the agent is waiting, so this is cheap. */
+    private fun refreshForms() {
+        viewModelScope.launch {
+            runCatching { api.pendingForms(sessionID) }
+                .onSuccess { forms -> _state.update { it.copy(forms = forms) } }
+        }
+    }
+
     fun reconnect() {
         _state.update { it.copy(connectionLost = false) }
         refresh()
@@ -315,9 +348,9 @@ class ChatViewModel(
         if (resyncJob?.isActive == true) return
         resyncJob = viewModelScope.launch {
             delay(RESYNC_DELAY_MS)
-            runCatching { api.messages(sessionID) }
-                .onSuccess { raw ->
-                    val entries = raw.mapNotNull(MessageMapper::toEntry)
+            runCatching { api.messagePage(sessionID) }
+                .onSuccess { page ->
+                    val entries = page.messages.mapNotNull(MessageMapper::toEntry).asReversed()
                     val running = entries.lastOrNull()
                         ?.let { it is ChatEntry.Assistant && it.isStreaming }
                         ?: false
@@ -326,6 +359,9 @@ class ChatViewModel(
                             entries = entries,
                             isRunning = running,
                             isLoading = false,
+                            // Only the newest window is replaced; anything the
+                            // user already paged back to stays loaded.
+                            olderCursor = it.olderCursor ?: page.olderCursor,
                         )
                     }
                 }
@@ -333,14 +369,18 @@ class ChatViewModel(
     }
 
     /**
-     * Full refetch. The event feed has no replay, so anything missed while the
-     * socket was down can only be recovered from the message history.
+     * Reloads the newest window of history.
+     *
+     * This must be the newest page, not the first page: a long session has
+     * thousands of messages and the server caps a page at 200, so fetching from
+     * the start would show the beginning of the conversation forever and never
+     * the current turn. `order=desc` + reverse gives the tail.
      */
     fun refresh() {
         viewModelScope.launch {
             try {
-                val raw = api.messages(sessionID)
-                val entries = raw.mapNotNull(MessageMapper::toEntry)
+                val page = api.messagePage(sessionID)
+                val entries = page.messages.mapNotNull(MessageMapper::toEntry).asReversed()
                 val running = entries.lastOrNull()
                     ?.let { it is ChatEntry.Assistant && it.isStreaming }
                     ?: false
@@ -350,6 +390,7 @@ class ChatViewModel(
                         isLoading = false,
                         isRunning = running,
                         error = null,
+                        olderCursor = page.olderCursor,
                         // A new session has no server-side title yet. The first
                         // user line is a better label than the word "Session".
                         title = it.title.ifBlank {
@@ -368,6 +409,36 @@ class ChatViewModel(
                 _state.update { it.copy(isLoading = false, error = e.message) }
             } catch (e: Exception) {
                 _state.update { it.copy(isLoading = false, error = e.message ?: "Could not load messages.") }
+            }
+        }
+    }
+
+    /**
+     * Prepends the next older page, so scrolling up reaches the start of a long
+     * conversation instead of stopping at the newest 200 messages.
+     */
+    fun loadOlder() {
+        val cursor = _state.value.olderCursor ?: return
+        if (_state.value.loadingOlder) return
+        _state.update { it.copy(loadingOlder = true) }
+
+        viewModelScope.launch {
+            try {
+                val page = api.messagePage(sessionID, cursor = cursor)
+                val older = page.messages.mapNotNull(MessageMapper::toEntry).asReversed()
+                _state.update { current ->
+                    // Guard against a resync having replaced the timeline while
+                    // this page was in flight.
+                    val existing = current.entries.map { it.id }.toSet()
+                    val merged = older.filterNot { it.id in existing } + current.entries
+                    current.copy(
+                        entries = merged,
+                        olderCursor = page.olderCursor,
+                        loadingOlder = false,
+                    )
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(loadingOlder = false) }
             }
         }
     }
@@ -528,6 +599,14 @@ class ChatViewModel(
             "session.inbox.delivered" -> _state.update {
                 it.copy(queued = (it.queued - 1).coerceAtLeast(0))
             }
+
+            // A `question` tool blocks the turn, so the form only appears after
+            // the tool starts. Checking on tool events is what makes the prompt
+            // show up while the agent is waiting rather than after it gives up.
+            "session.tool.called",
+            "session.tool.input.started",
+            "session.execution.started",
+            -> refreshForms()
 
             "session.inbox.cancelled" -> _state.update {
                 it.copy(queued = (it.queued - 1).coerceAtLeast(0))

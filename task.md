@@ -1,5 +1,20 @@
 # Task — OpenCode Mobile
 
+## In progress
+
+- [x] **Stuck on a long session**: history was fetched from the *start* of the
+      conversation (`order=asc`, capped at 200), so the newest turns were
+      unreachable. Now opens at the newest page and pages backwards on scroll.
+- [x] Render the `question` tool as a card (it is a **form**, not a message)
+- [x] Task/reasoning header: `labelMedium`, tighter padding, smaller chevron
+- [x] Maestro flows: pairing, a real two-turn conversation, tools + question
+- [x] Version 1.0.2 released
+
+## Next
+
+- [ ] Permission approval cards (`/api/session/{id}/permission`)
+- [ ] Session search over message bodies, not just titles
+
 ## Done
 
 - [x] Project scaffold, build, install, verified against the live server
@@ -8,70 +23,42 @@
       fenced code, nested lists, task boxes, quotes, alerts, tables, rules, links
 - [x] Fixed punctuation loss — apostrophes/parentheses were being dropped
 - [x] Fixed reference links swallowing their label
-- [x] Reasoning card now shares the tool card surface (`AgentActivityCard`)
+- [x] Reasoning card shares the tool card surface (`AgentActivityCard`)
 - [x] Composer: agent / model / effort selector sheet
 - [x] Attach files (system picker, inline `data:` URI, 8 MB cap)
-- [x] Scroll-to-bottom button — plain down arrow, not a download glyph
-- [x] QR pairing + pasted pairing link (manual URL/password still available)
-- [x] Session title falls back to the first user line
-- [x] Launcher icon and status-bar colours moved to the new palette
-- [x] Dead code removed; 44 unit tests; release build signed and installable
-- [x] README rewritten to match the code
-- [x] Agent/tool cards show a header only (no preview line)
-- [x] Paperclip glyph redrawn (the old arc geometry rendered as a squiggle)
-- [x] GitHub repo, `.gitignore`, and a Release workflow that builds a signed APK
-      and publishes it with a generated changelog — **verified**: run
-      [39247316999](https://github.com/yaffalhakim1/opencode-mobile/actions/runs/39247316999)
-      succeeded and published `v1.0.0` with `opencode-mobile-v1.0.0.apk`
+- [x] Scroll-to-bottom button — plain down arrow
+- [x] QR pairing: parses the JSON payload the desktop app actually encodes
+- [x] Prompts queue while the agent is busy (`delivery=queue`)
+- [x] System back walks the route stack
+- [x] Session list: group by project/recency, filter, search
+- [x] New session in a chosen project
+- [x] Agent/tool cards show a header only
+- [x] GitHub repo, signed release workflow, `RELEASING.md`, `CHANGELOG.md`
+- [x] Release v1.0.1 published
 
-## Next — session list
+## Verified on device
 
-- [x] Filters: All / Running / Today, plus text search over title and project
-- [x] Group sessions by project
-- [x] Group sessions by recency (Today / Yesterday / This week / Older)
-- [x] Grouping toggle: project ⇄ updated
-- [x] New-chat project picker — `POST /api/session` takes
-      `location: { directory }`, populated from `GET /api/project`.
-      Verified: picking "Mobile Apps" created a session with
-      `location=Y:\Learn\Mobile Apps`.
-- [x] Live sessions marked with a green dot (from `/api/session/active`)
-- [x] System back walks the route stack (chat → list → exit) instead of
-      finishing the activity from the chat screen
-
-## Verified on device (emulator-5554, live server)
-
-- [x] Connect → session list with real sessions
-- [x] Chat screen: user bubble, markdown answer, reasoning card, tool cards
-- [x] Markdown renders correctly (apostrophes, parentheses, headings, bold)
-- [x] Selection sheet lists real agents/models/effort counts
-- [x] Effort switch persisted to the server (`variant` changed)
-- [x] File picker opens; attachment queued; prompt sent with `files: 1`
-- [x] Jump-to-bottom button appears when scrolled away
-- [x] **QR pairing end to end** on the signed release APK
-- [x] Signed release APK installs cleanly on a wiped device and launches
-- [x] No crashes in logcat across all of the above
+- [x] Pairing by pasted link → session list (Maestro `pair.yaml` passes)
+- [x] Two-turn conversation with real prompts; both turns survive refresh
+      (Maestro `conversation.yaml` passes)
+- [x] Shell tool card expands to Arguments/Result; question card renders,
+      answers, and the composer still works after
+      (Maestro `tools.yaml` via `scripts/run-tools-flow.ps1`)
+- [x] Long session (4000+ messages) opens at the newest turn, not the first
+- [x] Back from chat returns to the list (BACK keyevent)
+- [x] QR scan end to end (JSON payload) on a wiped install
 
 ## Bugs found while testing QR (all fixed)
 
-- **Camera frames were closed before ML Kit read them.** `ImageProxy.close()`
-  ran immediately after the asynchronous `process()` call, invalidating the
-  buffer. Now closed in `addOnCompleteListener`.
-- **One frame, many codes.** A single frame can contain several copies of the
-  same code; the detector reported each, so a single-use pairing code was
-  redeemed repeatedly and every attempt after the first failed with "expired".
-  The scanner now emits once via an atomic guard.
-- **Analysis resolution was too low.** The default 640×480 left too few pixels
-  per QR module; now 1280×720 via `ResolutionSelector`.
-- **Paired but stuck on the connect screen.** `AppRoot` only read the saved
-  connection at startup, so after pairing it routed to Sessions with a null
-  connection and bounced straight back. It now reloads the store on success.
-- **Preview cropped the frame.** Switched to `FIT_CENTER`.
-- **Play-Services barcode model never downloads** on a device without the Play
-  Store. Reverted to the bundled model.
-- **Unsigned release APK** could not be installed at all. Added a signing config.
+- Camera frames closed before ML Kit read them
+- One frame, many codes: single-use code redeemed repeatedly
+- Analysis resolution too low (640×480 → 1280×720)
+- Paired but stuck on connect: `AppRoot` never reloaded the saved connection
+- Preview cropped the frame → `FIT_CENTER`
+- Play-Services barcode model never downloads without the Play Store
+- Unsigned release APK could not install at all
 
 ## Known gaps
 
-- Permission approval cards are not implemented.
-- Session search/pagination (the cursor is parsed but not walked).
-- Queued/steered prompts (`delivery: "queue" | "steer"`) unused.
+- Permission approval cards not implemented
+- Session search/pagination (the cursor is parsed but not walked)

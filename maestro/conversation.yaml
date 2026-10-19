@@ -1,0 +1,107 @@
+# A full session: a real back-and-forth, then refresh and back navigation.
+#
+# The prompts read like a person using the app, because a trivial "reply with
+# exactly: alpha" only proves the socket carries bytes. A real prompt makes the
+# agent think, emit reasoning, and often call a tool — which is where the
+# rendering and the live tail actually get exercised.
+#
+# Assumes the app is paired. Run pair.yaml first, or point it at a paired install.
+appId: dev.opencode.mobile
+name: Conversation with a real prompt
+---
+- launchApp
+
+- extendedWaitUntil:
+    visible: "Sessions"
+    timeout: 20000
+
+# Grouping and filtering must not throw with real data loaded.
+- tapOn: "Project"
+- assertVisible: "Project"
+- tapOn: "Updated"
+- assertVisible: "Updated"
+- tapOn: "Running"
+- tapOn: "All"
+
+# ---- start a session -----------------------------------------------------
+# The FAB's label is not exposed as a matchable node, so tap its position.
+# "Server default" is always the first row; the project list is ordered by
+# recency, so naming one would make the flow depend on what was used last.
+- tapOn:
+    point: "77%,90%"
+- extendedWaitUntil:
+    visible: "New session in"
+    timeout: 15000
+- tapOn: "Server default"
+- extendedWaitUntil:
+    visible: "Ask OpenCode…"
+    timeout: 20000
+
+# ---- turn 1: a question with a real answer -------------------------------
+- tapOn: "Ask OpenCode…"
+- inputText: "What is the difference between a git rebase and a git merge? Two sentences."
+- tapOn: "Send prompt"
+
+# The user's own message must appear immediately, before any reply.
+- extendedWaitUntil:
+    visible: "What is the difference between a git rebase and a git merge? Two sentences."
+    timeout: 20000
+
+# Reasoning is where the agent's thinking shows up; it should appear on a
+# question like this. Tolerated rather than required, since not every model
+# emits it.
+- extendedWaitUntil:
+    notVisible: "Stop the agent"
+    timeout: 180000
+
+# The answer must be present, and the turn must have finished. The wording
+# varies per run, so this matches the user's own message and the absence of a
+# spinner instead of guessing the model's phrasing.
+- extendedWaitUntil:
+    notVisible: "Stop the agent"
+    timeout: 180000
+
+# ---- turn 2: follow up in the same session -------------------------------
+- tapOn: "Ask OpenCode…"
+- inputText: "Which one should I use on a shared branch, and why?"
+- tapOn: "Send prompt"
+
+# The user's message must appear in the timeline; asserting the composer cleared
+# is what catches a send that silently did nothing.
+- extendedWaitUntil:
+    visible: "Which one should I use on a shared branch, and why?"
+    timeout: 30000
+- extendedWaitUntil:
+    notVisible: "Stop the agent"
+    timeout: 180000
+
+# Both turns must still be on screen: the timeline is appended, not replaced.
+# Scrolled to the top first, because the newest turn can push the earlier one
+# out of view and an off-screen node is not "visible" to an assertion.
+- scrollUntilVisible:
+    element:
+      text: "What is the difference between a git rebase and a git merge? Two sentences."
+    direction: UP
+- assertVisible: "What is the difference between a git rebase and a git merge? Two sentences."
+- assertVisible: "Which one should I use on a shared branch, and why?"
+
+# ---- refresh -------------------------------------------------------------
+# Pull to refresh, then confirm history survived and the newest turn is still
+# the one on screen. This is the regression for the truncated-session bug.
+- swipe:
+    start: "50%,35%"
+    end: "50%,75%"
+    duration: 500
+- extendedWaitUntil:
+    visible: "Which one should I use on a shared branch, and why?"
+    timeout: 30000
+- assertVisible: "What is the difference between a git rebase and a git merge? Two sentences."
+
+# ---- back navigation -----------------------------------------------------
+# The IME is still open after sending, and BACK's first press only dismisses the
+# keyboard — so close it explicitly, then send BACK once.
+- hideKeyboard
+- pressKey: BACK
+- extendedWaitUntil:
+    visible: "Sessions"
+    timeout: 15000

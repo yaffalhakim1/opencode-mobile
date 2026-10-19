@@ -1,0 +1,39 @@
+# Pair with the tunnel link, then land on the session list.
+#
+# Pairing is a user action and cannot be scripted end to end without a device
+# holding a code, so this flow takes the link you would have scanned. It covers
+# everything after the scan: parsing, redeeming, storing the token, and routing
+# to the list.
+#
+# Run with:
+#   maestro test maestro/pair.yaml -e PAIRING_LINK=https://host/auth/connect/CODE
+appId: dev.opencode.mobile
+name: Pair and land on sessions
+---
+- launchApp:
+    clearState: true
+
+- assertVisible: "Connect to your server"
+
+# The link is pasted rather than scanned; the QR path is covered by
+# PairingLinkTest plus a manual scan, because a camera cannot be driven here.
+# Target the field itself, not the "Or paste the link" label above it.
+- tapOn:
+    id: ".*"
+    text: "https://host/auth/connect/abc123"
+- inputText: ${PAIRING_LINK}
+
+# The IME covers the button, so scroll it into view rather than pressing BACK to
+# dismiss the keyboard: BACK is a navigation gesture in this app.
+- scrollUntilVisible:
+    element:
+      text: "Pair and connect"
+    direction: DOWN
+- tapOn: "Pair and connect"
+
+# Landing on the list proves the token was accepted by /api/info, saved, and
+# that AppRoot reloaded the connection instead of bouncing back.
+- extendedWaitUntil:
+    visible: "Sessions"
+    timeout: 30000
+- assertNotVisible: "Connect to your server"

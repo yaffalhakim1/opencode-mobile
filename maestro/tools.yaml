@@ -1,0 +1,62 @@
+# Tool calls: shell output, and the `question` card.
+#
+# Run through scripts/run-tools-flow.ps1, which creates a session, prompts the
+# shell tool, injects a pending question form, and passes SESSION_ID in. A flow
+# cannot produce a `question` by asking: whether the agent calls that tool
+# depends on its toolset.
+appId: dev.opencode.mobile
+name: Tool calls including question
+---
+- launchApp
+
+- extendedWaitUntil:
+    visible: "Sessions"
+    timeout: 20000
+
+# Open the prepared session. The server renames a session after the first turn,
+# so the harness passes the generated title in as SESSION_TITLE.
+- scrollUntilVisible:
+    element:
+      text: ${SESSION_TITLE}
+    direction: UP
+    timeout: 30000
+- tapOn: ${SESSION_TITLE}
+
+# ---- a shell tool call ---------------------------------------------------
+# The tool card renders with its name and a status pill.
+- extendedWaitUntil:
+    visible: "shell"
+    timeout: 60000
+
+# Expanding the card must reveal the arguments and the result, not a blank body.
+# The output lives inside one code-block node, so assert on the section labels
+# (discrete nodes) rather than a substring of the block.
+- tapOn: "shell"
+- extendedWaitUntil:
+    visible: "Result"
+    timeout: 30000
+- assertVisible: "Arguments"
+
+# ---- the question card ---------------------------------------------------
+- extendedWaitUntil:
+    visible: "Which colour do you prefer?"
+    timeout: 60000
+- assertVisible: "Red"
+- assertVisible: "Blue"
+
+# Choosing an option and answering must settle the form, which is what unblocks
+# the agent. If either step failed, the card would stay on screen.
+- tapOn: "Red"
+- tapOn: "Answer"
+- extendedWaitUntil:
+    notVisible: "Which colour do you prefer?"
+    timeout: 30000
+
+# The composer must still work after a form was answered.
+- tapOn: "Ask OpenCode…"
+- inputText: "Reply with the single word: finished"
+- hideKeyboard
+- tapOn: "Send prompt"
+- extendedWaitUntil:
+    visible: "finished"
+    timeout: 120000

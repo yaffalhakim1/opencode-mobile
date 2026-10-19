@@ -51,6 +51,7 @@ import dev.opencode.mobile.ui.components.AssistantMessage
 import dev.opencode.mobile.ui.components.ChatComposer
 import dev.opencode.mobile.ui.components.Glyphs
 import dev.opencode.mobile.ui.components.NoticeMessage
+import dev.opencode.mobile.ui.components.QuestionCard
 import dev.opencode.mobile.ui.components.StateMessage
 import dev.opencode.mobile.ui.components.UserMessage
 import dev.opencode.mobile.ui.theme.extendedColors
@@ -93,6 +94,17 @@ fun ChatScreen(
         }
     }
     LaunchedEffect(atBottom) { viewModel.onTailVisibilityChanged(atBottom) }
+
+    // Reaching the top pulls the next older page, so a long conversation can be
+    // read back to its start rather than stopping at the newest window.
+    val atTop by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex <= 2 && !state.loadingOlder
+        }
+    }
+    LaunchedEffect(atTop, state.olderCursor) {
+        if (atTop && state.olderCursor != null) viewModel.loadOlder()
+    }
 
     Scaffold(
         topBar = {
@@ -197,6 +209,15 @@ fun ChatScreen(
 
                             is ChatEntry.Notice -> NoticeMessage(entry)
                         }
+                    }
+
+                    // Questions sit at the end: the agent is blocked on them, so
+                    // they belong where the user is already looking.
+                    items(state.forms, key = { "form-${it.id}" }) { form ->
+                        QuestionCard(
+                            form = form,
+                            onAnswer = { answer -> viewModel.answerForm(form, answer) },
+                        )
                     }
                 }
             }
