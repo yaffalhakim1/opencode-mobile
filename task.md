@@ -24,13 +24,15 @@
 
 ## Next — session list
 
-- [ ] Filters: by text, by project, by state (running / idle)
-- [ ] Group sessions by project
-- [ ] Group sessions by recency (Today / Yesterday / This week / Older)
-- [ ] Grouping toggle: project ⇄ updated
-- [ ] New-chat project picker — **possible**: `POST /api/session` accepts
-      `location: { directory }`, and `GET /api/project` returns `canonical` paths
-      to offer. Needs a project sheet on the create-session action.
+- [x] Filters: All / Running / Today, plus text search over title and project
+- [x] Group sessions by project
+- [x] Group sessions by recency (Today / Yesterday / This week / Older)
+- [x] Grouping toggle: project ⇄ updated
+- [x] New-chat project picker — `POST /api/session` takes
+      `location: { directory }`, populated from `GET /api/project`.
+      Verified: picking "Mobile Apps" created a session with
+      `location=Y:\Learn\Mobile Apps`.
+- [x] Live sessions marked with a green dot (from `/api/session/active`)
 
 ## Verified on device (emulator-5554, live server)
 
