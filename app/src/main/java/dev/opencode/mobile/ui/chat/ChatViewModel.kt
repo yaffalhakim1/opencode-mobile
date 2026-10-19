@@ -47,6 +47,8 @@ data class ChatUiState(
     /** Bumped when the screen should scroll to the newest entry. */
     val scrollRequest: Long = 0,
     val showJumpToBottom: Boolean = false,
+    /** Prompts accepted while a turn was running and not yet delivered. */
+    val queued: Int = 0,
 )
 
 class ChatViewModel(
@@ -63,6 +65,9 @@ class ChatViewModel(
     val state: StateFlow<ChatUiState> = _state.asStateFlow()
 
     private var streamJob: Job? = null
+
+    /** Debounced reconciliation while a turn is live; see [scheduleResync]. */
+    private var resyncJob: Job? = null
 
     init {
         refresh()
@@ -227,20 +232,47 @@ class ChatViewModel(
     fun send() {
         val current = _state.value
         val text = current.draft.trim()
-        if (text.isEmpty() || current.isRunning) return
+        if (text.isEmpty()) return
 
+        // While a turn is running the prompt is queued rather than blocked: the
+        // server holds it and delivers it when the agent is free, which is what
+        // you want when you think of something mid-run.
+        val queued = current.isRunning
         _state.update {
-            it.copy(draft = "", isRunning = true, error = null, attachments = emptyList())
+            it.copy(
+                draft = "",
+                error = null,
+                attachments = emptyList(),
+                isRunning = true,
+                queued = if (queued) it.queued + 1 else it.queued,
+            )
         }
 
         viewModelScope.launch {
             try {
                 val files = current.attachments.mapNotNull { encode(it) }
-                api.sendPrompt(sessionID, text, files)
+                api.sendPrompt(
+                    sessionID = sessionID,
+                    text = text,
+                    files = files,
+                    delivery = if (queued) "queue" else null,
+                )
             } catch (e: OpenCodeException) {
-                _state.update { it.copy(isRunning = false, error = e.message) }
+                _state.update {
+                    it.copy(
+                        isRunning = queued && it.isRunning,
+                        queued = if (queued) (it.queued - 1).coerceAtLeast(0) else it.queued,
+                        error = e.message,
+                    )
+                }
             } catch (e: Exception) {
-                _state.update { it.copy(isRunning = false, error = e.message ?: "Could not send the prompt.") }
+                _state.update {
+                    it.copy(
+                        isRunning = queued && it.isRunning,
+                        queued = if (queued) (it.queued - 1).coerceAtLeast(0) else it.queued,
+                        error = e.message ?: "Could not send the prompt.",
+                    )
+                }
             }
         }
     }
@@ -266,6 +298,38 @@ class ChatViewModel(
         _state.update { it.copy(connectionLost = false) }
         refresh()
         connectStream()
+    }
+
+    /**
+     * Pulls the projected history while a turn is still running.
+     *
+     * The event feed is live-only: if the socket was down, or the turn had
+     * already produced most of its output before the app opened, no delta will
+     * ever arrive for that text. The server does keep the projected message, so
+     * re-reading history is the only way to show the current turn in full.
+     *
+     * Debounced because deltas arrive many times a second and each resync is a
+     * full message fetch.
+     */
+    private fun scheduleResync() {
+        if (resyncJob?.isActive == true) return
+        resyncJob = viewModelScope.launch {
+            delay(RESYNC_DELAY_MS)
+            runCatching { api.messages(sessionID) }
+                .onSuccess { raw ->
+                    val entries = raw.mapNotNull(MessageMapper::toEntry)
+                    val running = entries.lastOrNull()
+                        ?.let { it is ChatEntry.Assistant && it.isStreaming }
+                        ?: false
+                    _state.update {
+                        it.copy(
+                            entries = entries,
+                            isRunning = running,
+                            isLoading = false,
+                        )
+                    }
+                }
+        }
     }
 
     /**
@@ -346,6 +410,7 @@ class ChatViewModel(
                         isRunning = true,
                     )
                 }
+                scheduleResync()
             }
 
             "session.text.ended" -> events.textEnded(event)?.let { payload ->
@@ -452,7 +517,21 @@ class ChatViewModel(
                 }
             }
 
-            "session.execution.started" -> _state.update { it.copy(isRunning = true) }
+            "session.execution.started" -> {
+                _state.update { it.copy(isRunning = true) }
+                // The turn may have begun before this client connected, so the
+                // deltas for its opening text were never seen. Pull the history
+                // once now rather than waiting for the turn to finish.
+                scheduleResync()
+            }
+
+            "session.inbox.delivered" -> _state.update {
+                it.copy(queued = (it.queued - 1).coerceAtLeast(0))
+            }
+
+            "session.inbox.cancelled" -> _state.update {
+                it.copy(queued = (it.queued - 1).coerceAtLeast(0))
+            }
 
             "session.execution.succeeded",
             "session.execution.failed",
@@ -478,6 +557,9 @@ class ChatViewModel(
 
     private companion object {
         const val RECONNECT_DELAY_MS = 1_500L
+
+        /** Long enough that a burst of deltas triggers one refetch, not dozens. */
+        const val RESYNC_DELAY_MS = 900L
     }
 }
 

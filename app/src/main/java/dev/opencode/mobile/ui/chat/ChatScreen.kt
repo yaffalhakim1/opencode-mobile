@@ -153,6 +153,7 @@ fun ChatScreen(
                     onAttach = { filePicker.launch(arrayOf("*/*")) },
                     onDetach = { viewModel.detach(it) },
                     onOpenSelector = { sheetOpen = true },
+                    queued = state.queued,
                 )
             }
         },

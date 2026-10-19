@@ -62,8 +62,9 @@ fun ChatComposer(
     onOpenSelector: () -> Unit,
     modifier: Modifier = Modifier,
     placeholder: String = "Ask OpenCode…",
+    queued: Int = 0,
 ) {
-    val canSend = enabled && value.isNotBlank() && !isRunning
+    val canSend = enabled && value.isNotBlank()
 
     Column(
         modifier = modifier
@@ -72,6 +73,18 @@ fun ChatComposer(
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        if (queued > 0) {
+            Text(
+                text = if (queued == 1) {
+                    "1 prompt queued — it runs when the agent is free"
+                } else {
+                    "$queued prompts queued — they run when the agent is free"
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
         if (attachments.isNotEmpty()) {
             AttachmentStrip(attachments = attachments, onDetach = onDetach)
         }
@@ -120,19 +133,41 @@ fun ChatComposer(
                     label = "send-stop",
                 ) { running ->
                     if (running) {
-                        FilledIconButton(
-                            onClick = onStop,
-                            modifier = Modifier.size(52.dp),
-                            colors = IconButtonDefaults.filledIconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer,
-                                contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                            ),
+                        // Send stays available while the agent works: the prompt is
+                        // queued, and Stop is the separate action.
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Icon(
-                                imageVector = Glyphs.Stop,
-                                contentDescription = "Stop the agent",
-                                modifier = Modifier.size(22.dp),
-                            )
+                            FilledIconButton(
+                                onClick = onSend,
+                                enabled = canSend,
+                                modifier = Modifier.size(52.dp),
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                                ),
+                            ) {
+                                Icon(
+                                    imageVector = Glyphs.Send,
+                                    contentDescription = "Queue prompt",
+                                    modifier = Modifier.size(22.dp),
+                                )
+                            }
+                            FilledIconButton(
+                                onClick = onStop,
+                                modifier = Modifier.size(52.dp),
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                                ),
+                            ) {
+                                Icon(
+                                    imageVector = Glyphs.Stop,
+                                    contentDescription = "Stop the agent",
+                                    modifier = Modifier.size(22.dp),
+                                )
+                            }
                         }
                     } else {
                         FilledIconButton(
