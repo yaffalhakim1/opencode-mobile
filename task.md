@@ -20,7 +20,9 @@
 - [x] Agent/tool cards show a header only (no preview line)
 - [x] Paperclip glyph redrawn (the old arc geometry rendered as a squiggle)
 - [x] GitHub repo, `.gitignore`, and a Release workflow that builds a signed APK
-      and publishes it with a generated changelog
+      and publishes it with a generated changelog — **verified**: run
+      [39247316999](https://github.com/yaffalhakim1/opencode-mobile/actions/runs/39247316999)
+      succeeded and published `v1.0.0` with `opencode-mobile-v1.0.0.apk`
 
 ## Next — session list
 
@@ -33,6 +35,8 @@
       Verified: picking "Mobile Apps" created a session with
       `location=Y:\Learn\Mobile Apps`.
 - [x] Live sessions marked with a green dot (from `/api/session/active`)
+- [x] System back walks the route stack (chat → list → exit) instead of
+      finishing the activity from the chat screen
 
 ## Verified on device (emulator-5554, live server)
 
