@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Self-hosted OpenCode servers are commonly reached over plain HTTP on a LAN
+  address, so cleartext stays allowed for user-supplied hosts. Traffic to any
+  HTTPS tunnel is unaffected by this setting.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
