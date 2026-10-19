@@ -1,5 +1,6 @@
 package dev.opencode.mobile.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -84,6 +85,16 @@ fun AppRoot(
             color = MaterialTheme.colorScheme.background,
         ) {}
         return
+    }
+
+    // System back walks the route stack instead of leaving the app. Without this
+    // the gesture on the chat screen finished the activity, which reads as a
+    // crash to anyone used to a normal stack.
+    BackHandler(enabled = route.depth > 1) {
+        route = when (route) {
+            is Route.Chat, Route.Settings -> Route.Sessions
+            else -> Route.Connect
+        }
     }
 
     AnimatedContent(
