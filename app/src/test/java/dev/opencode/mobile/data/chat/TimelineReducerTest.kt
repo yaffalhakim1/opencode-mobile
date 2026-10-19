@@ -125,4 +125,50 @@ class TimelineReducerTest {
         val result = TimelineReducer.appendText(emptyList(), "", 0, "x")
         assertEquals(1, result.size)
     }
+
+    // ---- merge: a resync must never shorten a reply ----------------------
+
+    @Test
+    fun `merge keeps the longer streamed text`() {
+        // The stream got further than the snapshot that raced it.
+        val live = listOf(assistant(blocks = listOf(AssistantBlock.Text("Hello there, fri"))))
+        val server = listOf(assistant(blocks = listOf(AssistantBlock.Text("Hello there"))))
+
+        val merged = TimelineReducer.merge(live, server)
+        val text = (merged.single() as ChatEntry.Assistant).blocks.single() as AssistantBlock.Text
+        assertEquals("Hello there, fri", text.text)
+    }
+
+    @Test
+    fun `merge prefers the server when it is further ahead`() {
+        val live = listOf(assistant(blocks = listOf(AssistantBlock.Text("Hello"))))
+        val server = listOf(assistant(blocks = listOf(AssistantBlock.Text("Hello there, friend"))))
+
+        val merged = TimelineReducer.merge(live, server)
+        val text = (merged.single() as ChatEntry.Assistant).blocks.single() as AssistantBlock.Text
+        assertEquals("Hello there, friend", text.text)
+    }
+
+    @Test
+    fun `merge follows server order and includes messages the stream never saw`() {
+        val user = ChatEntry.User("msg_0", "hi", 0L)
+        val live = listOf(user, assistant(id = "msg_1", blocks = listOf(AssistantBlock.Text("a"))))
+        val server = listOf(
+            user,
+            assistant(id = "msg_1", blocks = listOf(AssistantBlock.Text("a"))),
+            assistant(id = "msg_2", blocks = listOf(AssistantBlock.Text("b"))),
+        )
+
+        val merged = TimelineReducer.merge(live, server)
+        assertEquals(listOf("msg_0", "msg_1", "msg_2"), merged.map { it.id })
+    }
+
+    @Test
+    fun `merge drops nothing the server still has`() {
+        val live = listOf(assistant(id = "gone", blocks = listOf(AssistantBlock.Text("stale"))))
+        val server = listOf(assistant(id = "msg_1", blocks = listOf(AssistantBlock.Text("current"))))
+
+        val merged = TimelineReducer.merge(live, server)
+        assertEquals(listOf("msg_1"), merged.map { it.id })
+    }
 }

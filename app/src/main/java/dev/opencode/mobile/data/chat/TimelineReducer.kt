@@ -18,6 +18,36 @@ object TimelineReducer {
         }
     }
 
+    /**
+     * Folds a server snapshot into the live timeline without losing streamed text.
+     *
+     * A resync races the stream: the request may be answered before the last few
+     * deltas arrive, so replacing the timeline outright can shorten a reply that
+     * is mid-sentence. Server order is authoritative, but where both sides have
+     * the same assistant message the longer text wins — that is the streamed
+     * version, which is never behind.
+     */
+    fun merge(live: List<ChatEntry>, fromServer: List<ChatEntry>): List<ChatEntry> {
+        val liveById = live.associateBy { it.id }
+        return fromServer.map { server ->
+            val current = liveById[server.id]
+            when {
+                current is ChatEntry.Assistant && server is ChatEntry.Assistant ->
+                    if (server.textLength() >= current.textLength()) server else current
+                else -> server
+            }
+        }
+    }
+
+    /** Total rendered text, used to decide which side of a merge is further ahead. */
+    private fun ChatEntry.Assistant.textLength(): Int = blocks.sumOf { block ->
+        when (block) {
+            is AssistantBlock.Text -> block.text.length
+            is AssistantBlock.Reasoning -> block.text.length
+            is AssistantBlock.Tool -> (block.output?.length ?: 0) + (block.input?.length ?: 0)
+        }
+    }
+
     fun appendText(
         entries: List<ChatEntry>,
         messageID: String,

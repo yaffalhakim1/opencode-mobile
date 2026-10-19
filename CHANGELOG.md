@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.0.4]
+
+### Android
+
+- **Fixed: replies appeared only after you pulled to refresh.** Sending a message
+  showed your own text and then nothing — the agent was answering, but the phone
+  stayed silent until you refreshed, so the app looked broken. The live updates
+  were arriving and being discarded: the first words of a reply always arrive
+  before the message they belong to exists, and the app only knew how to add to a
+  message it already had. Replies now appear as they are written.
+
+- **A reply can no longer lose its last few words while it is being written.**
+  The app refreshes a session's history in the background during a turn, and a
+  refresh that finished slightly behind the live text could shorten a sentence
+  that was mid-word. Background refreshes now keep whichever version is further
+  ahead instead of overwriting.
+
 ## [1.0.3]
 
 ### Android

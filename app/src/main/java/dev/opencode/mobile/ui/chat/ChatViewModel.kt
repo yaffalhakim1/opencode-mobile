@@ -350,18 +350,18 @@ class ChatViewModel(
             delay(RESYNC_DELAY_MS)
             runCatching { api.messagePage(sessionID) }
                 .onSuccess { page ->
-                    val entries = page.messages.mapNotNull(MessageMapper::toEntry).asReversed()
-                    val running = entries.lastOrNull()
+                    val fromServer = page.messages.mapNotNull(MessageMapper::toEntry).asReversed()
+                    val running = fromServer.lastOrNull()
                         ?.let { it is ChatEntry.Assistant && it.isStreaming }
                         ?: false
-                    _state.update {
-                        it.copy(
-                            entries = entries,
+                    _state.update { current ->
+                        current.copy(
+                            entries = TimelineReducer.merge(current.entries, fromServer),
                             isRunning = running,
                             isLoading = false,
                             // Only the newest window is replaced; anything the
                             // user already paged back to stays loaded.
-                            olderCursor = it.olderCursor ?: page.olderCursor,
+                            olderCursor = current.olderCursor ?: page.olderCursor,
                         )
                     }
                 }
