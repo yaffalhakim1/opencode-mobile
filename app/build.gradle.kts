@@ -7,6 +7,26 @@ plugins {
 
 import java.util.Properties
 
+// One version for the whole tree. `version.properties` is the only place a
+// release number is written; versionCode is derived from it so the two can never
+// disagree (an APK whose versionCode did not increase is never offered as an
+// update, which is the classic Android release bug).
+val appVersion = Properties().apply {
+    rootProject.file("version.properties").inputStream().use { load(it) }
+}.getProperty("version").orEmpty().ifBlank { "1.0.0" }
+
+/** `major * 10000 + minor * 100 + patch`: 1.0.1 -> 10001. Strictly increasing. */
+fun deriveVersionCode(version: String): Int {
+    val parts = version.trim().removePrefix("v").split('.')
+    val major = parts.getOrNull(0)?.toIntOrNull() ?: 0
+    val minor = parts.getOrNull(1)?.toIntOrNull() ?: 0
+    val patch = parts.getOrNull(2)?.toIntOrNull() ?: 0
+    require(minor < 100 && patch < 100) {
+        "Version components must stay below 100 so versionCode stays unambiguous: $version"
+    }
+    return major * 10000 + minor * 100 + patch
+}
+
 // A side-loaded app still has to be signed to install. The keystore lives in the
 // project because this is a personal build; see keystore.properties.
 val keystoreProperties = Properties()
@@ -34,9 +54,9 @@ android {
         applicationId = "dev.opencode.mobile"
         minSdk = 26
         targetSdk = 36
-        // CI overrides these per release; the defaults are for local builds.
-        versionCode = (project.findProperty("versionCode") as String?)?.toInt() ?: 1
-        versionName = (project.findProperty("versionName") as String?) ?: "1.0.0"
+        // Derived, never hand-written: see version.properties and RELEASING.md.
+        versionCode = deriveVersionCode(appVersion)
+        versionName = appVersion
     }
 
     buildTypes {
