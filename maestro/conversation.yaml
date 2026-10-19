@@ -86,8 +86,13 @@ name: Conversation with a real prompt
 - assertVisible: "Which one should I use on a shared branch, and why?"
 
 # ---- refresh -------------------------------------------------------------
-# Pull to refresh, then confirm history survived and the newest turn is still
-# the one on screen. This is the regression for the truncated-session bug.
+# Pull to refresh, then confirm the newest turn is still on screen. This is the
+# regression for the truncated-session bug: before the fix, refreshing showed an
+# old window of history.
+#
+# Only the newest turn is asserted here, not both: a refresh keeps the scroll
+# position, and the first turn may simply be above the viewport. Requiring both
+# to be visible at once makes the flow fail on screen height, not on behaviour.
 - swipe:
     start: "50%,35%"
     end: "50%,75%"
@@ -95,7 +100,13 @@ name: Conversation with a real prompt
 - extendedWaitUntil:
     visible: "Which one should I use on a shared branch, and why?"
     timeout: 30000
-- assertVisible: "What is the difference between a git rebase and a git merge? Two sentences."
+
+# And the earlier turn is still in the timeline, reachable by scrolling up.
+- scrollUntilVisible:
+    element:
+      text: "What is the difference between a git rebase and a git merge? Two sentences."
+    direction: UP
+    timeout: 20000
 
 # ---- back navigation -----------------------------------------------------
 # The IME is still open after sending, and BACK's first press only dismisses the
