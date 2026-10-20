@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.0.9]
+
+### Android
+
+- **Fixed: a long reply grew past the bottom of the screen.** The conversation
+  did not follow the text as it arrived, so by the time the reply finished you
+  were looking at a part of it you had already read. The conversation now sits
+  at the newest message and stays there, the way a chat does, and the answer
+  grows upward from the bottom as it is written.
+
+- **The button back to the newest message is always there.** It used to come
+  and go as you scrolled, so it appeared and disappeared with no pattern you
+  could learn. It is there now, wherever you are in the conversation.
+
 ## [1.0.8]
 
 ### Android
