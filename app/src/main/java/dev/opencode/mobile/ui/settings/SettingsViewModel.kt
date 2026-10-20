@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.opencode.mobile.core.net.ServerConnection
 import dev.opencode.mobile.data.settings.ConnectionStore
+import dev.opencode.mobile.data.settings.SettingsStore
+import dev.opencode.mobile.data.settings.ThemeChoice
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,29 +14,39 @@ import kotlinx.coroutines.launch
 
 data class SettingsUiState(
     val connection: ServerConnection? = null,
-    val isDark: Boolean = false,
+    val theme: ThemeChoice = ThemeChoice.System,
     val disconnecting: Boolean = false,
 )
 
 class SettingsViewModel(
     private val store: ConnectionStore,
-    isDark: Boolean,
-    private val onThemeOverride: (Boolean?) -> Unit,
+    private val settings: SettingsStore,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(SettingsUiState(isDark = isDark))
+    private val _state = MutableStateFlow(SettingsUiState())
     val state: StateFlow<SettingsUiState> = _state.asStateFlow()
 
     init {
         viewModelScope.launch {
             _state.update { it.copy(connection = store.current()) }
         }
+        viewModelScope.launch {
+            settings.theme.collect { theme ->
+                _state.update { it.copy(theme = theme) }
+            }
+        }
     }
 
-    /** null follows the system; true/false pin the choice for this process. */
-    fun setDarkMode(enabled: Boolean?) {
-        onThemeOverride(enabled)
-        if (enabled != null) _state.update { it.copy(isDark = enabled) }
+    /**
+     * The theme the user picked.
+     *
+     * The choice is written straight away: it is a preference, and a
+     * preference that only lives in memory is a preference that is lost the
+     * moment the app is closed.
+     */
+    fun setTheme(choice: ThemeChoice) {
+        _state.update { it.copy(theme = choice) }
+        viewModelScope.launch { settings.setTheme(choice) }
     }
 
     fun disconnect(onDone: () -> Unit) {

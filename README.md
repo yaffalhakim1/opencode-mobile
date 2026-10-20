@@ -87,6 +87,17 @@ rejects a server-local path, which is the point: a phone cannot produce a
 path on the server's filesystem. Base64 inflates by ~33%, so the picker rejects
 anything over 8 MB before the request is built.
 
+**Mentions.** Typing `@` in the composer searches the project for files, and
+`/` lists the skills the server has registered. Picking one puts it in the
+prompt text and attaches it: a mentioned file goes to the server as a `file:`
+URI pointing at the server's own filesystem, so the bytes never travel, while
+a mentioned skill is named by its id. Both carry the span of the prompt text
+they cover, so the server knows which characters the file or skill was named
+at — and a mention added later moves the ones that were already there.
+
+The marker has to start a word, so an email address or a path in the middle of
+a sentence does not open the list.
+
 **Jump to bottom.** The timeline follows the tail only while the agent is
 streaming. Scrolling up stops the follow and shows a button; the button (or
 sending a prompt) returns to the newest message.
@@ -194,19 +205,24 @@ worth it for a feature that must work on the first try.
 | `GET` | `/api/info` — validate credentials |
 | `POST` | `/api/pair` — mint a pairing code |
 | `GET` | `/auth/connect/{code}` — redeem it for a token |
-| `GET` | `/api/session` — list |
+| `GET` | `/api/session` — list, paged with `cursor` |
 | `POST` | `/api/session` — create |
 | `DELETE` | `/api/session/{id}` |
 | `GET` | `/api/session/{id}/message` — history |
-| `POST` | `/api/session/{id}/prompt` — send (text + `files`) |
+| `POST` | `/api/session/{id}/prompt` — send (text + `files` + `skills`) |
 | `POST` | `/api/session/{id}/interrupt` — stop |
 | `POST` | `/api/session/{id}/agent` — switch agent |
 | `POST` | `/api/session/{id}/model` — switch model and effort |
 | `GET` | `/api/agent` — agent catalog |
 | `GET` | `/api/model` — model catalog and variants |
+| `GET` | `/api/skill` — skills, for `/` mentions |
+| `GET` | `/api/fs/find` — files, for `@` mentions |
 | `GET` | `/api/event` — SSE |
 
 Auth is `Authorization: Basic base64("opencode:" + password)`.
+
+The location of a project is passed as `location[directory]=/absolute/path`, or
+omitted to ask for the server's default one.
 
 DTOs decode with `ignoreUnknownKeys = true`. The HTTP API is published as
 experimental and adds fields between releases; unknown message types are dropped
@@ -219,11 +235,13 @@ Two shapes are worth calling out because they are easy to get wrong:
   `Missing key at files[0].uri`.
 - `variants` on a model are its reasoning efforts (`none`, `low`, `high`, …) and
   are passed as `model.variant`; an absent variant means the model's default.
+- A `file:` attachment has to be an **absolute** path on the server, and a
+  Windows path needs the extra leading slash or the drive letter is read as
+  the host. A bare relative path is rejected.
 
 ## Not built yet
 
-- Permission approval cards for tool calls that need consent
-- Session search and pagination (the cursor is parsed but not walked)
-- Queued/steered prompts (`delivery: "queue" | "steer"` is unused)
-- Release signing config
+- Session search over message bodies (the server's own `search` only matches
+  titles)
+- Steered prompts (`delivery: "steer"` is unused; `"queue"` is used)
 

@@ -14,12 +14,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.opencode.mobile.data.settings.ThemeChoice
 import dev.opencode.mobile.ui.components.Glyphs
 import dev.opencode.mobile.ui.theme.CodeType
 
@@ -95,15 +96,35 @@ fun SettingsScreen(
             SectionLabel("Appearance")
 
             SettingRow(
-                title = "Dark theme",
-                subtitle = "Follows the system setting until changed",
-                trailing = {
-                    Switch(
-                        checked = state.isDark,
-                        onCheckedChange = { checked -> viewModel.setDarkMode(checked) },
-                    )
+                title = "Theme",
+                subtitle = when (state.theme) {
+                    ThemeChoice.System -> "Following the system setting"
+                    ThemeChoice.Dark -> "Always dark"
+                    ThemeChoice.Light -> "Always light"
                 },
-            )
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ThemeChoice.entries.forEach { choice ->
+                        FilterChip(
+                            selected = state.theme == choice,
+                            onClick = { viewModel.setTheme(choice) },
+                            label = {
+                                Text(
+                                    text = when (choice) {
+                                        ThemeChoice.System -> "System"
+                                        ThemeChoice.Dark -> "Dark"
+                                        ThemeChoice.Light -> "Light"
+                                    },
+                                    style = MaterialTheme.typography.labelMedium,
+                                )
+                            },
+                        )
+                    }
+                }
+            }
 
             Spacer(Modifier.height(24.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
@@ -161,7 +182,7 @@ private fun SectionLabel(text: String) {
 private fun SettingRow(
     title: String,
     subtitle: String,
-    trailing: @Composable () -> Unit,
+    trailing: @Composable () -> Unit = {},
 ) {
     Row(
         modifier = Modifier

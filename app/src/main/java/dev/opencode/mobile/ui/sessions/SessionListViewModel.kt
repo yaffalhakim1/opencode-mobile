@@ -26,6 +26,10 @@ data class SessionsUiState(
     val query: String = "",
     /** Section titles the user has expanded past the first page. */
     val expandedSections: Set<String> = emptySet(),
+    /** Cursor for the next older page of sessions, or null at the end. */
+    val olderCursor: String? = null,
+    /** True while the next older page is being fetched. */
+    val loadingMore: Boolean = false,
 ) {
     val isEmpty: Boolean get() = !isLoading && sessions.isEmpty() && error == null
 
@@ -54,9 +58,15 @@ class SessionListViewModel(
         }
         viewModelScope.launch {
             try {
-                val sessions = api.listSessions()
+                val page = api.sessionPage()
                 _state.update {
-                    it.copy(sessions = sessions, isLoading = false, isRefreshing = false, error = null)
+                    it.copy(
+                        sessions = page.sessions,
+                        olderCursor = page.olderCursor,
+                        isLoading = false,
+                        isRefreshing = false,
+                        error = null,
+                    )
                 }
             } catch (e: OpenCodeException) {
                 _state.update { it.copy(isLoading = false, isRefreshing = false, error = e.message) }
@@ -66,6 +76,41 @@ class SessionListViewModel(
                 }
             }
             refreshRunning()
+        }
+    }
+
+    /**
+     * Loads the next older page of sessions.
+     *
+     * The server caps a page, and the cursor walks towards older sessions. The
+     * page is prepended to what is already loaded, so the list grows instead
+     * of being replaced.
+     */
+    fun loadMore() {
+        val cursor = _state.value.olderCursor ?: return
+        if (_state.value.loadingMore) return
+        _state.update { it.copy(loadingMore = true) }
+
+        viewModelScope.launch {
+            try {
+                val page = api.sessionPage(cursor = cursor)
+                _state.update { current ->
+                    val existing = current.sessions.map { it.id }.toSet()
+                    val merged = current.sessions + page.sessions.filterNot { it.id in existing }
+                    current.copy(
+                        sessions = merged,
+                        olderCursor = page.olderCursor,
+                        loadingMore = false,
+                    )
+                }
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(
+                        loadingMore = false,
+                        error = e.message ?: "Could not load more sessions.",
+                    )
+                }
+            }
         }
     }
 

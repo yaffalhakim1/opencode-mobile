@@ -28,6 +28,7 @@ import dev.opencode.mobile.core.net.ServerConnection
 import dev.opencode.mobile.data.remote.EventStream
 import dev.opencode.mobile.data.remote.OpenCodeApi
 import dev.opencode.mobile.data.settings.ConnectionStore
+import dev.opencode.mobile.data.settings.SettingsStore
 import dev.opencode.mobile.ui.chat.ChatScreen
 import dev.opencode.mobile.ui.chat.ChatViewModel
 import dev.opencode.mobile.ui.connect.ConnectScreen
@@ -53,6 +54,8 @@ private sealed interface Route {
         val title: String?,
         val agent: String? = null,
         val modelKey: String? = null,
+        /** The project's directory on the server, for file mentions. */
+        val directory: String? = null,
     ) : Route
     data object Settings : Route
 }
@@ -60,9 +63,8 @@ private sealed interface Route {
 @Composable
 fun AppRoot(
     connectionStore: ConnectionStore,
+    settingsStore: SettingsStore,
     appContext: android.content.Context,
-    isDark: Boolean,
-    onThemeOverride: (Boolean?) -> Unit,
 ) {
     var connection by remember { mutableStateOf<ServerConnection?>(null) }
     var route by rememberSaveable(stateSaver = RouteSaver) { mutableStateOf<Route>(Route.Connect) }
@@ -133,8 +135,8 @@ fun AppRoot(
                             key = "sessions-${active.baseUrl}",
                             factory = sessionsFactory(active),
                         ),
-                        onOpenSession = { id, title, agent, modelKey ->
-                            route = Route.Chat(id, title, agent, modelKey)
+                        onOpenSession = { id, title, agent, modelKey, directory ->
+                            route = Route.Chat(id, title, agent, modelKey, directory)
                         },
                         onOpenSettings = { route = Route.Settings },
                     )
@@ -157,7 +159,7 @@ fun AppRoot(
             }
 
             Route.Settings -> SettingsScreen(
-                viewModel = viewModel(factory = settingsFactory(connectionStore, isDark, onThemeOverride)),
+                viewModel = viewModel(factory = settingsFactory(connectionStore, settingsStore)),
                 onBack = { route = Route.Sessions },
                 onDisconnected = {
                     connection = null
@@ -189,6 +191,7 @@ private val RouteSaver = Saver<Route, String>(
                 route.title.orEmpty(),
                 route.agent.orEmpty(),
                 route.modelKey.orEmpty(),
+            route.directory.orEmpty(),
             ).joinToString("|")
         }
     },
@@ -204,6 +207,7 @@ private val RouteSaver = Saver<Route, String>(
                     title = parts.getOrNull(2)?.takeIf { it.isNotEmpty() },
                     agent = parts.getOrNull(3)?.takeIf { it.isNotEmpty() },
                     modelKey = parts.getOrNull(4)?.takeIf { it.isNotEmpty() },
+                    directory = parts.getOrNull(5)?.takeIf { it.isNotEmpty() },
                 )
             }
             else -> Route.Connect
@@ -232,16 +236,16 @@ private fun chatFactory(
         sessionTitle = route.title,
         sessionAgent = route.agent,
         sessionModelKey = route.modelKey,
+        sessionDirectory = route.directory,
         appContext = appContext,
     )
 }
 
 private fun settingsFactory(
     store: ConnectionStore,
-    isDark: Boolean,
-    onThemeOverride: (Boolean?) -> Unit,
+    settings: SettingsStore,
 ) = viewModelFactory {
-    SettingsViewModel(store, isDark, onThemeOverride)
+    SettingsViewModel(store, settings)
 }
 
 /** Small helper so each factory stays a one-liner without boilerplate classes. */

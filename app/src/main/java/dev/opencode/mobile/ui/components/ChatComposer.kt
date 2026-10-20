@@ -29,12 +29,22 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.opencode.mobile.ui.chat.ChatSelection
+import dev.opencode.mobile.ui.chat.MentionList
+import dev.opencode.mobile.ui.chat.MentionState
+import dev.opencode.mobile.ui.chat.MentionSuggestion
 import dev.opencode.mobile.ui.chat.PendingAttachment
 import dev.opencode.mobile.ui.theme.extendedColors
 
@@ -49,7 +59,8 @@ import dev.opencode.mobile.ui.theme.extendedColors
 @Composable
 fun ChatComposer(
     value: String,
-    onValueChange: (String) -> Unit,
+    caret: Int,
+    onValueChange: (String, Int) -> Unit,
     onSend: () -> Unit,
     onStop: () -> Unit,
     isRunning: Boolean,
@@ -60,11 +71,27 @@ fun ChatComposer(
     onAttach: () -> Unit,
     onDetach: (PendingAttachment) -> Unit,
     onOpenSelector: () -> Unit,
+    mention: MentionState,
+    onPickMention: (MentionSuggestion) -> Unit,
     modifier: Modifier = Modifier,
     placeholder: String = "Ask OpenCode…",
     queued: Int = 0,
 ) {
     val canSend = enabled && value.isNotBlank()
+
+    // The caret has to be known, because a mention is placed where it was
+    // typed and the server is told which characters of the prompt it covers.
+    var field by remember {
+        mutableStateOf(TextFieldValue(value, TextRange(caret.coerceIn(0, value.length))))
+    }
+    LaunchedEffect(value, caret) {
+        // The parent changes the text when a mention is chosen, and the caret
+        // has to follow it. While the user is typing the two agree, so this
+        // does not fight them.
+        if (value != field.text || caret != field.selection.end) {
+            field = TextFieldValue(value, TextRange(caret.coerceIn(0, value.length)))
+        }
+    }
 
     Column(
         modifier = modifier
@@ -89,14 +116,24 @@ fun ChatComposer(
             AttachmentStrip(attachments = attachments, onDetach = onDetach)
         }
 
+        if (!mention.isClosed) {
+            MentionList(
+                state = mention,
+                onPick = onPickMention,
+            )
+        }
+
         Row(
             verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 OutlinedTextField(
-                    value = value,
-                    onValueChange = onValueChange,
+                    value = field,
+                    onValueChange = { updated ->
+                        field = updated
+                        onValueChange(updated.text, updated.selection.end)
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 52.dp, max = 160.dp),

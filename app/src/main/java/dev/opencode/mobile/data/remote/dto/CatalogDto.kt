@@ -102,12 +102,18 @@ data class PairingSessionDto(
  *
  * The prompt endpoint takes a single `uri`, not the `data`/`mime`/`source`
  * triple that appears in stored messages. A remote client cannot use `file:`
- * (the path is on the server's machine), so the bytes go inline as a `data:`
- * URI and travel in the same request as the text.
+ * for a file the user picked on the phone (that path is on the phone's
+ * machine), so those bytes go inline as a `data:` URI and travel in the same
+ * request as the text.
+ *
+ * A file the *server* has is the other way round: its `file:` URI points at
+ * the server's own filesystem, and nothing is transferred. [mention] says
+ * where in the prompt text the file was named.
  */
 @Serializable
 data class PromptFileDto(
     val uri: String,
     val name: String? = null,
     val description: String? = null,
+    val mention: PromptMentionDto? = null,
 )

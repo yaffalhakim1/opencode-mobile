@@ -75,16 +75,16 @@ fun ChatScreen(
 
     // Follow the tail only while the agent is producing output, so a user
     // scrolling back through history is not yanked forward.
-    LaunchedEffect(state.entries.size, state.isRunning) {
-        if (state.isRunning && state.entries.isNotEmpty()) {
-            listState.animateScrollToItem(state.entries.lastIndex)
+    LaunchedEffect(state.timeline.entries.size, state.timeline.isRunning) {
+        if (state.timeline.isRunning && state.timeline.entries.isNotEmpty()) {
+            listState.animateScrollToItem(state.timeline.entries.lastIndex)
         }
     }
 
     // An explicit jump (the button, or sending a prompt) always wins.
-    LaunchedEffect(state.scrollRequest) {
-        if (state.entries.isNotEmpty()) {
-            listState.animateScrollToItem(state.entries.lastIndex)
+    LaunchedEffect(state.timeline.scrollRequest) {
+        if (state.timeline.entries.isNotEmpty()) {
+            listState.animateScrollToItem(state.timeline.entries.lastIndex)
         }
     }
 
@@ -100,11 +100,11 @@ fun ChatScreen(
     // read back to its start rather than stopping at the newest window.
     val atTop by remember {
         derivedStateOf {
-            listState.firstVisibleItemIndex <= 2 && !state.loadingOlder
+            listState.firstVisibleItemIndex <= 2 && !state.timeline.loadingOlder
         }
     }
-    LaunchedEffect(atTop, state.olderCursor) {
-        if (atTop && state.olderCursor != null) viewModel.loadOlder()
+    LaunchedEffect(atTop, state.timeline.olderCursor) {
+        if (atTop && state.timeline.olderCursor != null) viewModel.loadOlder()
     }
 
     Scaffold(
@@ -117,14 +117,14 @@ fun ChatScreen(
                 },
                 title = {
                     Text(
-                        text = state.title.ifBlank { "Session" },
+                        text = state.timeline.title.ifBlank { "Session" },
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 },
                 actions = {
-                    if (state.isRunning) {
+                    if (state.timeline.isRunning) {
                         CircularProgressIndicator(
                             modifier = Modifier
                                 .padding(end = 16.dp)
@@ -151,22 +151,25 @@ fun ChatScreen(
                     )
                 }
                 ChatComposer(
-                    value = state.draft,
+                    value = state.composer.draft,
+                    caret = state.composer.caret,
                     onValueChange = viewModel::onDraftChange,
                     onSend = {
                         viewModel.send()
                         viewModel.jumpToBottom()
                     },
                     onStop = viewModel::stop,
-                    isRunning = state.isRunning,
-                    enabled = !state.isLoading,
-                    selection = state.selection,
+                    isRunning = state.timeline.isRunning,
+                    enabled = !state.timeline.isLoading,
+                    selection = state.composer.selection,
                     selectionLabel = state.selectionLabel(),
-                    attachments = state.attachments,
+                    attachments = state.composer.attachments,
                     onAttach = { filePicker.launch(arrayOf("*/*")) },
                     onDetach = { viewModel.detach(it) },
                     onOpenSelector = { sheetOpen = true },
-                    queued = state.queued,
+                    queued = state.composer.queued,
+                    mention = state.mention,
+                    onPickMention = viewModel::mentionPicked,
                 )
             }
         },
@@ -177,11 +180,11 @@ fun ChatScreen(
                 .padding(innerPadding),
         ) {
             when {
-                state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                state.timeline.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
 
-                state.entries.isEmpty() -> StateMessage(
+                state.timeline.entries.isEmpty() -> StateMessage(
                     title = "Empty session",
                     body = "Send the first instruction and your agent starts working on your machine.",
                     glyph = Glyphs.Sparkle,
@@ -198,7 +201,7 @@ fun ChatScreen(
                     ),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    items(state.rows, key = { it.key }) { row ->
+                    items(state.timeline.rows, key = { it.key }) { row ->
                         when (row) {
                             is ChatRow.User -> UserMessage(row.entry)
                             is ChatRow.AssistantRun -> AssistantMessage(
@@ -215,7 +218,7 @@ fun ChatScreen(
                     // Questions and permission requests sit at the end: the agent
                     // is blocked on them, so they belong where the user is
                     // already looking.
-                    items(state.permissions, key = { "perm-${it.id}" }) { request ->
+                    items(state.blocking.permissions, key = { "perm-${it.id}" }) { request ->
                         PermissionCard(
                             request = request,
                             onDecide = { decision -> viewModel.answerPermission(request, decision) },
@@ -225,7 +228,7 @@ fun ChatScreen(
                     // One question card at a time: a card per pending form made a
                     // run of questions fill the screen. The next one appears once
                     // the current one is answered.
-                    state.forms.firstOrNull()?.let { form ->
+                    state.blocking.forms.firstOrNull()?.let { form ->
                         item(key = "form-${form.id}") {
                             QuestionCard(
                                 form = form,
@@ -237,7 +240,7 @@ fun ChatScreen(
             }
 
             AnimatedVisibility(
-                visible = state.showJumpToBottom && state.entries.isNotEmpty(),
+                visible = state.timeline.showJumpToBottom && state.timeline.entries.isNotEmpty(),
                 enter = fadeIn() + scaleIn(initialScale = 0.8f),
                 exit = fadeOut() + scaleOut(targetScale = 0.8f),
                 modifier = Modifier
@@ -247,7 +250,7 @@ fun ChatScreen(
                 SmallFloatingActionButton(
                     onClick = {
                         viewModel.jumpToBottom()
-                        scope.launch { listState.animateScrollToItem(state.entries.lastIndex) }
+                        scope.launch { listState.animateScrollToItem(state.timeline.entries.lastIndex) }
                     },
                     shape = CircleShape,
                     containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -265,8 +268,8 @@ fun ChatScreen(
 
     if (sheetOpen) {
         ChatSelectionSheet(
-            catalog = state.catalog,
-            selection = state.selection,
+            catalog = state.composer.catalog,
+            selection = state.composer.selection,
             onSelectAgent = viewModel::selectAgent,
             onSelectModel = viewModel::selectModel,
             onSelectEffort = viewModel::selectEffort,
@@ -277,9 +280,9 @@ fun ChatScreen(
 
 /** `Build · DeepSeek V4.1 Flash` — enough to identify the pair without a wall of text. */
 private fun ChatUiState.selectionLabel(): String {
-    if (selectionLoading) return "Loading models…"
-    val agent = catalog.agent(selection.agentID)?.name
-    val model = catalog.model(selection.modelKey)?.name
+    if (composer.selectionLoading) return "Loading models…"
+    val agent = composer.catalog.agent(composer.selection.agentID)?.name
+    val model = composer.catalog.model(composer.selection.modelKey)?.name
     return when {
         agent != null && model != null -> "$agent · $model"
         model != null -> model

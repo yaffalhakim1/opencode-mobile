@@ -19,6 +19,17 @@ object TimelineReducer {
     }
 
     /**
+     * The cursor for the next older page.
+     *
+     * The cursor walks *backwards* from the newest page. Once the user has
+     * paged in older history it has to keep pointing further back: resetting it
+     * to the newest page's cursor would make paging loop over the window it
+     * had already loaded, and the start of the session would stay out of
+     * reach no matter how far the user scrolled.
+     */
+    fun nextOlderCursor(current: String?, fromPage: String?): String? = current ?: fromPage
+
+    /**
      * Folds a server snapshot into the live timeline without losing streamed text.
      *
      * A resync races the stream: the request may be answered before the last few
@@ -26,10 +37,47 @@ object TimelineReducer {
      * is mid-sentence. Server order is authoritative, but where both sides have
      * the same assistant message the longer text wins — that is the streamed
      * version, which is never behind.
+     *
+     * The snapshot is one *page* of a long session, not the whole conversation.
+     * The live timeline is therefore longer than the snapshot in two directions,
+     * and both directions have to survive the merge:
+     *
+     * - **Before** the window: pages the user scrolled back and loaded. The
+     *   server cannot know about them — it only sent the newest page — so
+     *   dropping them silently threw away the user's scrollback every time a
+     *   turn ended.
+     * - **After** the window: a reply that is streaming right now, which the
+     *   server has not projected yet. Dropping it made the in-flight answer
+     *   vanish for a moment on every resync.
+     *
+     * The window is located by the ids the two sides share. A live entry
+     * inside the window that the server does not have is dropped, because
+     * inside the window the server is authoritative.
      */
     fun merge(live: List<ChatEntry>, fromServer: List<ChatEntry>): List<ChatEntry> {
+        if (fromServer.isEmpty()) return live
+        if (live.isEmpty()) return fromServer
+
         val liveById = live.associateBy { it.id }
-        return fromServer.map { server ->
+        val serverIds = fromServer.mapTo(HashSet()) { it.id }
+
+        // Where the server's window sits inside the live timeline.
+        val overlap = live.withIndex().filter { (_, entry) -> entry.id in serverIds }
+        val firstOverlap = overlap.firstOrNull()?.index
+        val lastOverlap = overlap.lastOrNull()?.index
+
+        val older = if (firstOverlap != null && firstOverlap > 0) {
+            live.subList(0, firstOverlap)
+        } else {
+            emptyList()
+        }
+        val newer = if (lastOverlap != null && lastOverlap < live.lastIndex) {
+            live.subList(lastOverlap + 1, live.size)
+        } else {
+            emptyList()
+        }
+
+        val window = fromServer.map { server ->
             val current = liveById[server.id]
             when {
                 current is ChatEntry.Assistant && server is ChatEntry.Assistant ->
@@ -37,6 +85,8 @@ object TimelineReducer {
                 else -> server
             }
         }
+
+        return older + window + newer
     }
 
     /** Total rendered text, used to decide which side of a merge is further ahead. */

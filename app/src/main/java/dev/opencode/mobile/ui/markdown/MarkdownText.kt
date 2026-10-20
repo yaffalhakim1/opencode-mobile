@@ -48,8 +48,9 @@ fun MarkdownText(
     modifier: Modifier = Modifier,
     style: TextStyle = MaterialTheme.typography.bodyLarge,
     color: Color = MaterialTheme.colorScheme.onSurface,
+    streaming: Boolean = false,
 ) {
-    val blocks = remember(markdown) { MarkdownParserAdapter.parse(markdown) }
+    val blocks = rememberMarkdownBlocks(markdown, streaming)
 
     Column(modifier = modifier.fillMaxWidth()) {
         blocks.forEachIndexed { index, block ->
@@ -60,236 +61,53 @@ fun MarkdownText(
 }
 
 /**
- * Spacing is driven by the pair of blocks, not by each block alone: a list
- * following a paragraph needs more air than two list items do.
+ * Parses the document into blocks.
+ *
+ * A finished message is parsed once, when it changes. A streaming one is
+ * different: the text changes many times a second, and each change would
+ * re-parse the whole document and rebuild every inline span. Over the length
+ * of an answer that is quadratic, and it all happens on the main thread while
+ * the reader is watching the text appear.
+ *
+ * So a streaming document is parsed on a timer instead. The text the reader
+ * sees lags by up to one interval, which at a tenth of a second is invisible,
+ * and the work per second stays flat however long the answer gets.
  */
 @Composable
-private fun BlockSpacer(previous: MdBlock, current: MdBlock) {
-    val height = when {
-        previous is MdBlock.ListBlock && current is MdBlock.ListBlock -> 8.dp
-        previous is MdBlock.Heading -> 8.dp
-        else -> 12.dp
+private fun rememberMarkdownBlocks(markdown: String, streaming: Boolean): List<MdBlock> {
+    if (!streaming) {
+        return remember(markdown) { MarkdownParserAdapter.parse(markdown) }
     }
-    Box(Modifier.size(height))
-}
 
-@Composable
-private fun MdBlockView(block: MdBlock, style: TextStyle, color: Color) {
-    when (block) {
-        is MdBlock.Heading -> Heading(block, color)
-        is MdBlock.Paragraph -> InlineText(block.inline, style, color)
-        is MdBlock.Code -> CodeBlock(text = block.text, label = block.language)
-        is MdBlock.ListBlock -> ListView(block, style, color)
-        is MdBlock.Quote -> Quote(block, style, color)
-        is MdBlock.Alert -> Alert(block, style, color)
-        is MdBlock.Table -> Table(block, color)
-        MdBlock.Rule -> HorizontalDivider(
-            modifier = Modifier.padding(vertical = 4.dp),
-            color = MaterialTheme.colorScheme.outlineVariant,
-        )
-    }
-}
-
-@Composable
-private fun Heading(block: MdBlock.Heading, color: Color) {
-    val style = when (block.level) {
-        1 -> MaterialTheme.typography.headlineSmall
-        2 -> MaterialTheme.typography.titleLarge
-        3 -> MaterialTheme.typography.titleMedium
-        else -> MaterialTheme.typography.titleSmall
-    }
-    InlineText(
-        inline = block.inline,
-        style = style,
-        color = color,
-        modifier = Modifier.padding(top = if (block.level <= 2) 4.dp else 0.dp),
-    )
-}
-
-@Composable
-private fun Quote(block: MdBlock.Quote, style: TextStyle, color: Color) {
-    Row(modifier = Modifier.fillMaxWidth()) {
-        Box(
-            modifier = Modifier
-                .width(3.dp)
-                .background(MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(2.dp)),
-        )
-        Column(
-            modifier = Modifier.padding(start = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            block.blocks.forEach { child ->
-                MdBlockView(
-                    child,
-                    style.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                    MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+    // The bucket only advances once per interval, so a burst of deltas inside
+    // one window parses once rather than once per delta.
+    val bucket = System.currentTimeMillis() / STREAM_PARSE_INTERVAL_MS
+    val cache = remember { ParseCache() }
+    return remember(bucket) {
+        if (cache.markdown != markdown) {
+            cache.blocks = MarkdownParserAdapter.parse(markdown)
+            cache.markdown = markdown
         }
+        cache.blocks
     }
 }
 
-@Composable
-private fun Alert(block: MdBlock.Alert, style: TextStyle, color: Color) {
-    val tint = when (block.kind) {
-        AlertKind.Note -> MaterialTheme.colorScheme.tertiary
-        AlertKind.Tip -> MaterialTheme.extendedColors.success
-        AlertKind.Important -> MaterialTheme.colorScheme.primary
-        AlertKind.Warning -> Color(0xFFE0A02A)
-        AlertKind.Caution -> MaterialTheme.colorScheme.error
-    }
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(tint.copy(alpha = 0.08f), MaterialTheme.shapes.medium)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Text(
-            text = block.kind.label.uppercase(),
-            style = MaterialTheme.typography.labelSmall,
-            color = tint,
-        )
-        block.blocks.forEach { child -> MdBlockView(child, style, color) }
-    }
-}
-
-@Composable
-private fun ListView(block: MdBlock.ListBlock, style: TextStyle, color: Color) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        block.items.forEachIndexed { index, item ->
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Box(
-                    modifier = Modifier.width(22.dp),
-                    contentAlignment = Alignment.TopStart,
-                ) {
-                    Bullet(block, index, item.checked)
-                }
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    item.blocks.forEach { child ->
-                        when (child) {
-                            // A nested list hangs under the item text.
-                            is MdBlock.ListBlock -> ListView(child, style, color)
-                            else -> MdBlockView(child, style, color)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun Bullet(block: MdBlock.ListBlock, index: Int, checked: Boolean?) {
-    val markerColor = MaterialTheme.colorScheme.onSurfaceVariant
-    when {
-        checked != null -> Box(
-            modifier = Modifier
-                .padding(top = 4.dp)
-                .size(14.dp)
-                .background(
-                    if (checked) MaterialTheme.colorScheme.primary else Color.Transparent,
-                    RoundedCornerShape(4.dp),
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (checked) {
-                Text(
-                    text = "✓",
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                    color = MaterialTheme.colorScheme.onPrimary,
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(14.dp)
-                        .background(MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
-                        .padding(1.dp)
-                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(3.dp)),
-                )
-            }
-        }
-
-        block.ordered -> Text(
-            text = "${block.start + index}.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = markerColor,
-        )
-
-        else -> Box(
-            modifier = Modifier.padding(top = 9.dp, start = 6.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(5.dp)
-                    .background(markerColor, CircleShape),
-            )
-        }
-    }
+/** The last parse, so an unchanged document is not parsed again. */
+private class ParseCache {
+    var markdown: String = ""
+    var blocks: List<MdBlock> = emptyList()
 }
 
 /**
- * Tables render as a compact grid; a table whose cells wrap is unreadable, so
- * cells clamp to a few lines and the table keeps the full content width.
+ * How often a streaming document is re-parsed.
+ *
+ * Fast enough that the text still reads as arriving, slow enough that the
+ * parse is not the thing deciding the frame rate.
  */
-@Composable
-private fun Table(block: MdBlock.Table, color: Color) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.extendedColors.cardSurface, MaterialTheme.shapes.small)
-            .padding(vertical = 4.dp),
-    ) {
-        TableRow(block.header, block.alignments, color, header = true)
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        block.rows.forEach { row ->
-            TableRow(row, block.alignments, color, header = false)
-        }
-    }
-}
+private const val STREAM_PARSE_INTERVAL_MS = 100L
 
 @Composable
-private fun TableRow(
-    cells: List<MdInline>,
-    alignments: List<ColumnAlign>,
-    color: Color,
-    header: Boolean,
-) {
-    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
-        cells.forEachIndexed { index, cell ->
-            val align = alignments.getOrNull(index) ?: ColumnAlign.Start
-            Text(
-                text = cell.toAnnotatedString(
-                    base = if (header) {
-                        MaterialTheme.typography.labelLarge
-                    } else {
-                        MaterialTheme.typography.bodyMedium
-                    },
-                    color = color,
-                ),
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(end = 8.dp),
-                textAlign = when (align) {
-                    ColumnAlign.Start -> TextAlign.Start
-                    ColumnAlign.Center -> TextAlign.Center
-                    ColumnAlign.End -> TextAlign.End
-                },
-                maxLines = 6,
-            )
-        }
-    }
-}
-
-@Composable
-private fun InlineText(
+internal fun InlineText(
     inline: MdInline,
     style: TextStyle,
     color: Color,
@@ -316,7 +134,7 @@ private fun InlineText(
  * markdown means.
  */
 @Composable
-private fun MdInline.toAnnotatedString(base: TextStyle, color: Color): AnnotatedString {
+internal fun MdInline.toAnnotatedString(base: TextStyle, color: Color): AnnotatedString {
     val palette = SpanPalette(
         link = MaterialTheme.colorScheme.primary,
         code = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -325,7 +143,7 @@ private fun MdInline.toAnnotatedString(base: TextStyle, color: Color): Annotated
     return toAnnotatedString(palette)
 }
 
-private fun MdInline.toAnnotatedString(palette: SpanPalette): AnnotatedString {
+internal fun MdInline.toAnnotatedString(palette: SpanPalette): AnnotatedString {
     if (spans.isEmpty()) return AnnotatedString(text)
 
     return buildAnnotatedString {
@@ -342,7 +160,7 @@ private fun MdInline.toAnnotatedString(palette: SpanPalette): AnnotatedString {
 }
 
 /** Resolved theme colours, so span construction stays a pure function. */
-private data class SpanPalette(
+internal data class SpanPalette(
     val link: Color,
     val code: Color,
     val codeBackground: Color,
@@ -374,4 +192,3 @@ private fun MdSpan.toSpanStyle(palette: SpanPalette): SpanStyle {
     }
     return result
 }
-

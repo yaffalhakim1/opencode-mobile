@@ -9,17 +9,28 @@ import android.net.Uri
  * in state across a long session is an easy way to lose the process.
  *
  * [uri] is null only in tests, where Android's `Uri` is an unimplemented stub.
+ *
+ * [sizeBytes] is what the provider *reported*, and is null when it reported
+ * nothing. It is a hint, not a guarantee: the cap is enforced again while the
+ * file is read, because a provider that reports no size is not a provider that
+ * vouches for the size.
  */
 data class PendingAttachment(
     val uri: Uri?,
     val name: String,
     val mime: String,
-    val sizeBytes: Long,
+    val sizeBytes: Long?,
 ) {
     val isImage: Boolean get() = mime.startsWith("image/")
 
-    /** The server caps inline payloads, so oversized picks are rejected early. */
-    val isTooLarge: Boolean get() = sizeBytes > MAX_BYTES
+    /**
+     * True when the provider reported a size over the cap.
+     *
+     * An unknown size is not treated as a pass. The read enforces the cap
+     * regardless, so such a file is rejected at send time rather than trusted
+     * here.
+     */
+    val isTooLarge: Boolean get() = sizeBytes != null && sizeBytes > MAX_BYTES
 
     companion object {
         /**
@@ -27,6 +38,9 @@ data class PendingAttachment(
          * generous per-file cap still risks a request the server rejects.
          */
         const val MAX_BYTES = 8L * 1024 * 1024
+
+        /** The cap as the user reads it. */
+        val LIMIT_LABEL: String = "${MAX_BYTES / (1024 * 1024)} MB"
     }
 }
 

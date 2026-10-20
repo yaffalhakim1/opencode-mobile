@@ -81,6 +81,18 @@ data class MessagePage(
     val olderCursor: String?,
 )
 
+/**
+ * One page of sessions.
+ *
+ * [olderCursor] walks towards older sessions. It is opaque and must be passed
+ * back **without** `order` or `search`: a cursor carries the filters of the
+ * request that produced it, and the server ignores any that are sent with it.
+ */
+data class SessionPage(
+    val sessions: List<SessionDto>,
+    val olderCursor: String?,
+)
+
 /** The server rejects a larger page than this. */
 const val MAX_MESSAGE_PAGE = 200
 

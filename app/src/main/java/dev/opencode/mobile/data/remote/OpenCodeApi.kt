@@ -1,6 +1,11 @@
 package dev.opencode.mobile.data.remote
 
 import dev.opencode.mobile.core.net.OpenCodeException
+import dev.opencode.mobile.data.remote.dto.FileEntryDto
+import dev.opencode.mobile.data.remote.dto.FilesPage
+import dev.opencode.mobile.data.remote.dto.PromptSkillDto
+import dev.opencode.mobile.data.remote.dto.SkillDto
+import dev.opencode.mobile.data.remote.dto.SkillsPage
 import dev.opencode.mobile.data.remote.dto.AgentDto
 import dev.opencode.mobile.data.remote.dto.AgentsPage
 import dev.opencode.mobile.data.remote.dto.DataEnvelope
@@ -20,6 +25,7 @@ import dev.opencode.mobile.data.remote.dto.PermissionsPage
 import dev.opencode.mobile.data.remote.dto.ProjectDto
 import dev.opencode.mobile.data.remote.dto.ServerInfoDto
 import dev.opencode.mobile.data.remote.dto.SessionDto
+import dev.opencode.mobile.data.remote.dto.SessionPage
 import dev.opencode.mobile.data.remote.dto.SessionsPage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -55,10 +61,27 @@ class OpenCodeApi(
     suspend fun serverInfo(): ServerInfoDto =
         get("api/info") { body -> json.decodeFromString(ServerInfoDto.serializer(), body) }
 
-    suspend fun listSessions(limit: Int = 50): List<SessionDto> =
-        get("api/session", mapOf("limit" to limit.toString(), "order" to "desc")) { body ->
-            json.decodeFromString(SessionsPage.serializer(), body).data
+    /**
+     * One page of sessions, newest first.
+     *
+     * The first page asks for the newest sessions; every later page passes the
+     * cursor and *no* order, because a cursor carries the filters of the
+     * request that produced it and the server ignores any that are sent with
+     * it.
+     */
+    suspend fun sessionPage(
+        limit: Int = DEFAULT_SESSION_PAGE,
+        cursor: String? = null,
+    ): SessionPage {
+        val query = buildMap {
+            put("limit", limit.toString())
+            if (cursor == null) put("order", "desc") else put("cursor", cursor)
         }
+        return get("api/session", query) { body ->
+            val page = json.decodeFromString(SessionsPage.serializer(), body)
+            SessionPage(page.data, page.cursor?.next)
+        }
+    }
 
     suspend fun createSession(title: String? = null, directory: String? = null): SessionDto {
         val payload = buildJsonObject {
@@ -110,31 +133,57 @@ class OpenCodeApi(
     suspend fun messages(sessionID: String, limit: Int = MAX_MESSAGE_PAGE): List<JsonObject> =
         messagePage(sessionID, limit).messages
 
+    /**
+     * Finds files in the project.
+     *
+     * The location is the session's project directory: the search is relative
+     * to it, and the answers are paths within it.
+     */
+    suspend fun findFiles(
+        query: String,
+        directory: String,
+        limit: Int = FILE_SEARCH_LIMIT,
+    ): List<FileEntryDto> {
+        val parameters = buildMap {
+            put("query", query)
+            put("location[directory]", directory)
+            put("type", "file")
+            put("limit", limit.toString())
+        }
+        return get("api/fs/find", parameters) { body ->
+            json.decodeFromString(FilesPage.serializer(), body).data
+        }
+    }
+
+    /**
+     * The skills the server has registered for this project.
+     *
+     * Without a location the server answers for its default one, which is the
+     * right answer for a server that serves a single project.
+     */
+    suspend fun skills(directory: String?): List<SkillDto> {
+        val parameters = if (directory.isNullOrBlank()) {
+            emptyMap()
+        } else {
+            mapOf("location[directory]" to directory)
+        }
+        return get("api/skill", parameters) { body ->
+            json.decodeFromString(SkillsPage.serializer(), body).data
+        }
+    }
+
     suspend fun sendPrompt(
         sessionID: String,
         text: String,
         files: List<PromptFileDto> = emptyList(),
+        skills: List<PromptSkillDto> = emptyList(),
         /**
          * `steer` interjects into the running turn; `queue` holds the prompt until
          * the current turn finishes. Null lets the server decide.
          */
         delivery: String? = null,
     ) {
-        val payload = buildJsonObject {
-            put("text", text)
-            if (!delivery.isNullOrBlank()) put("delivery", delivery)
-            if (files.isNotEmpty()) {
-                putJsonArray("files") {
-                    files.forEach { file ->
-                        addJsonObject {
-                            put("uri", file.uri)
-                            file.name?.let { put("name", it) }
-                            file.description?.let { put("description", it) }
-                        }
-                    }
-                }
-            }
-        }
+        val payload = PromptPayload.build(text, files, skills, delivery)
         post("api/session/$sessionID/prompt", payload) { body ->
             json.decodeFromString(DataEnvelope.serializer(PromptAcceptedDto.serializer()), body)
         }
@@ -311,5 +360,11 @@ class OpenCodeApi(
             explicitNulls = false
             coerceInputValues = true
         }
+
+        /** How many sessions one page holds. */
+        const val DEFAULT_SESSION_PAGE = 50
+
+        /** How many files one search answers with. */
+        const val FILE_SEARCH_LIMIT = 20
     }
 }

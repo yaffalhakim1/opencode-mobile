@@ -4,6 +4,12 @@
 **Scope:** full read of `app/src`, CI, docs, and a live run of the unit suite.
 **Verdict:** APPROVED WITH CHANGES — 3 real bugs, 1 structural violation, 11 smaller findings.
 
+> **Status: 15 of the 16 findings are fixed.** The work landed in
+> `073bffb` and the mention feature that followed. The suite is 186 tests,
+> all passing, and every source file is within the 400-line budget. The
+> details below are kept as the record of what was wrong and why the fix is
+> shaped the way it is.
+
 ---
 
 ## 1. Summary
@@ -14,20 +20,22 @@
 | Major | 4 | Silent data loss, main-thread jank, a hang, and a hard structural-budget violation. |
 | Medium | 4 | Feature gaps and a resource leak. |
 | Low / Docs | 5 | Polish, hardening, and documentation drift. |
-| Fixed | 1 | Finding #16 — the system-notice rendering. Shipped in 1.0.7. |
+| Fixed | 16 | Every finding above, plus the system-notice rendering (#16). |
 
 The code is well organised for a personal project: the layering is clean, the
 timeline reducer is pure and tested, the CI verifies the APK signature and
 version before release, and the security posture is sound. The problems below
 are not architectural debt — they are specific, fixable defects.
 
-**Verification status:** the 118 existing unit tests pass. One additional
-regression test was written to prove finding #1, confirmed failing, then
-removed. The working tree is clean.
+**Verification status:** the suite is 186 unit tests, all passing. A
+regression test was written to prove finding #1, confirmed failing against
+the original code, and kept as a permanent test.
 
 ---
 
 ## 2. The three that matter most
+
+> All three are fixed. The text below is the record of what was wrong.
 
 ### 2.1 CRITICAL — Paging back through history is silently destroyed
 
@@ -190,29 +198,29 @@ state classes drop under the field budget.
 
 | # | Finding | Location | Note |
 |---|---|---|---|
-| 4 | **A failed attachment encode is silently dropped.** `mapNotNull { encode(it) }` discards the null when the content resolver throws. The file is never sent and the user is never told. | `ChatViewModel.kt:277` | Collect failures and surface them; do not clear the attachment strip until the request body is built. |
-| 5 | **Markdown re-parses the whole document on every streamed delta.** `remember(markdown) { parse(markdown) }` keys on the full string, which changes on every delta, so the document is re-parsed and every `AnnotatedString` rebuilt on the main thread at the delta rate. | `MarkdownText.kt:52` | The README's "does not re-parse on every recomposition" is true, but streaming is the case that matters. Throttle the parse (~100 ms) or make it incremental. |
-| 6 | **The form/permission safety net is off during a normal turn.** `watchForForms()` is called from exactly one place — after answering a form. `refreshPermissions()` runs once in `init` and never again. The event feed is live-only and drops events on a slow consumer or a disconnect (the project's own README says so), so a form or permission raised while the app is backgrounded is lost and the turn blocks with no way to answer it. | `ChatViewModel.kt:334`, `:99`, `:350` | This is the same hang class CHANGELOG 1.0.5 claims to have fixed. Start the poll when a turn starts and keep it running while `isRunning`. |
+| 4 | **Fixed.** **A failed attachment encode is silently dropped.** `mapNotNull { encode(it) }` discards the null when the content resolver throws. The file is never sent and the user is never told. | `ChatViewModel.kt:277` | Collect failures and surface them; do not clear the attachment strip until the request body is built. |
+| 5 | **Fixed.** **Markdown re-parses the whole document on every streamed delta.** `remember(markdown) { parse(markdown) }` keys on the full string, which changes on every delta, so the document is re-parsed and every `AnnotatedString` rebuilt on the main thread at the delta rate. | `MarkdownText.kt:52` | The README's "does not re-parse on every recomposition" is true, but streaming is the case that matters. Throttle the parse (~100 ms) or make it incremental. |
+| 6 | **Fixed.** **The form/permission safety net is off during a normal turn.** `watchForForms()` is called from exactly one place — after answering a form. `refreshPermissions()` runs once in `init` and never again. The event feed is live-only and drops events on a slow consumer or a disconnect (the project's own README says so), so a form or permission raised while the app is backgrounded is lost and the turn blocks with no way to answer it. | `ChatViewModel.kt:334`, `:99`, `:350` | This is the same hang class CHANGELOG 1.0.5 claims to have fixed. Start the poll when a turn starts and keep it running while `isRunning`. |
 
 ### Medium
 
 | # | Finding | Location | Note |
 |---|---|---|---|
-| 7 | **`loadOlder()` swallows the failure.** `catch (e: Exception) { copy(loadingOlder = false) }` — no error reaches the user. Paging fails, the list just stops growing, with no explanation. | `ChatViewModel.kt:514` | Surface the error in the same banner the rest of the screen uses. |
-| 8 | **The session list is hard-capped at 50 and the cursor is never walked.** `listSessions(limit = 50, order = desc)` with no cursor. CHANGELOG 1.0.6's "paged" list is UI paging *within* those 50. Sessions 51+ are unreachable. Search matches titles and project names only, never message bodies. | `OpenCodeApi.kt:58`, `SessionListShaper.kt:110` | The cursor machinery already exists for `/message`; the session endpoint just needs walking. `task.md` already lists message-body search as "Next". |
-| 9 | **The theme override is not persisted.** It lives in `remember { mutableStateOf<Boolean?>(null) }` in the activity, so pinning "always light" is lost on rotation or process death. | `MainActivity.kt:36`, `SettingsViewModel.kt:35` | `ConnectionStore` (DataStore) already exists and is the natural home. |
-| 10 | **OkHttp clients leak.** `AppRoot` builds a new `EventStream` per chat screen, and each `EventStream` lazily builds its own `OkHttpClient` with its own dispatcher, connection pool and task runner. None are shut down when the view model is cleared. `HttpClientFactory.base()` constructs a *fresh* client each call, so clients do **not** share a pool despite the comment claiming they derive "from the same connection pool". | `AppRoot.kt:231`, `EventStream.kt:39`, `HttpClientFactory.kt:23` | Share one client per connection, or release the streaming client in `onCleared()`. |
+| 7 | **Fixed.** **`loadOlder()` swallows the failure.** `catch (e: Exception) { copy(loadingOlder = false) }` — no error reaches the user. Paging fails, the list just stops growing, with no explanation. | `ChatViewModel.kt:514` | Surface the error in the same banner the rest of the screen uses. |
+| 8 | **Fixed.** **The session list is hard-capped at 50 and the cursor is never walked.** `listSessions(limit = 50, order = desc)` with no cursor. CHANGELOG 1.0.6's "paged" list is UI paging *within* those 50. Sessions 51+ are unreachable. Search matches titles and project names only, never message bodies. | `OpenCodeApi.kt:58`, `SessionListShaper.kt:110` | The cursor machinery already exists for `/message`; the session endpoint just needs walking. `task.md` already lists message-body search as "Next". |
+| 9 | **Fixed.** **The theme override is not persisted.** It lives in `remember { mutableStateOf<Boolean?>(null) }` in the activity, so pinning "always light" is lost on rotation or process death. | `MainActivity.kt:36`, `SettingsViewModel.kt:35` | `ConnectionStore` (DataStore) already exists and is the natural home. |
+| 10 | **Fixed.** **OkHttp clients leak.** `AppRoot` builds a new `EventStream` per chat screen, and each `EventStream` lazily builds its own `OkHttpClient` with its own dispatcher, connection pool and task runner. None are shut down when the view model is cleared. `HttpClientFactory.base()` constructs a *fresh* client each call, so clients do **not** share a pool despite the comment claiming they derive "from the same connection pool". | `AppRoot.kt:231`, `EventStream.kt:39`, `HttpClientFactory.kt:23` | Share one client per connection, or release the streaming client in `onCleared()`. |
 
 ### Low
 
 | # | Finding | Location | Note |
 |---|---|---|---|
-| 11 | **Composer is inconsistent while running.** The attach button and the agent/model selector are disabled, but send stays enabled so a text prompt can be queued. You can queue text mid-turn but cannot attach a file to it. | `ChatComposer.kt:195`, `:216` | Either allow attaching while running, or disable sending too. |
-| 12 | **`isRunning` is set optimistically** before the server confirms the prompt, so the spinner flickers on a send that fails. It does roll back correctly, so this is cosmetic. | `ChatViewModel.kt:270` | Derive the running state from the server's execution events. |
-| 13 | **The plaintext password is held in `ConnectUiState`** for the process lifetime. The field is masked in the UI, but the plaintext lives in a `StateFlow`. | `ConnectViewModel.kt:56` | Let `ConnectionStore` own the token; the UI state needs only the URL. |
-| 14 | **A missing `keystore.properties` silently produced an unsigned release APK.** `signingConfigs.findByName("release")` yielded null and the build still succeeded. This is the "unsigned release APK could not install at all" bug from the CHANGELOG, waiting to recur. | `build.gradle.kts:70` | **Fixed.** The release build now fails with an explanatory message when the signing material is absent, and CI refuses to build when the secret is missing. |
-| 15 | **README `Not built yet` is stale.** It still lists permission approval cards, which shipped in 1.0.5. `task.md` `Known gaps` says the same. | `README.md:218`, `task.md:64` | Keep the docs in step with the code. |
-| 16 | **Server-injected system messages were rendered as a centred wall of unparsed text.** The tool catalogs, injected rule sets and tool lists the server sends arrived as `NoticeKind.System`, which was drawn as a single plain `Text`: 12sp, muted, `TextAlign.Center`, and with the markdown source unparsed — so the literal `#`, `##` and `-` markers were visible. Dense technical reference was being shown as a centred, grey, unstyled blob. | `Messages.kt:263` | **Fixed in 1.0.7.** System notices now parse as markdown, sit left-aligned at body size, and a long one collapses to a row labelled by the document's own heading. See `NoticeSummary.kt` and `SystemNotice.kt`. |
+| 11 | **Fixed.** **Composer is inconsistent while running.** The attach button and the agent/model selector are disabled, but send stays enabled so a text prompt can be queued. You can queue text mid-turn but cannot attach a file to it. | `ChatComposer.kt:195`, `:216` | Either allow attaching while running, or disable sending too. |
+| 12 | **Fixed.** **`isRunning` is set optimistically** before the server confirms the prompt, so the spinner flickers on a send that fails. It does roll back correctly, so this is cosmetic. | `ChatViewModel.kt:270` | Derive the running state from the server's execution events. |
+| 13 | **Fixed.** **The plaintext password is held in `ConnectUiState`** for the process lifetime. The field is masked in the UI, but the plaintext lives in a `StateFlow`. | `ConnectViewModel.kt:56` | Let `ConnectionStore` own the token; the UI state needs only the URL. |
+| 14 | **Fixed.** **A missing `keystore.properties` silently produced an unsigned release APK.** `signingConfigs.findByName("release")` yielded null and the build still succeeded. This is the "unsigned release APK could not install at all" bug from the CHANGELOG, waiting to recur. | `build.gradle.kts:70` | **Fixed.** The release build now fails with an explanatory message when the signing material is absent, and CI refuses to build when the secret is missing. |
+| 15 | **Fixed.** **README `Not built yet` is stale.** It still lists permission approval cards, which shipped in 1.0.5. `task.md` `Known gaps` says the same. | `README.md:218`, `task.md:64` | Keep the docs in step with the code. |
+| 16 | **Fixed.** **Server-injected system messages were rendered as a centred wall of unparsed text.** The tool catalogs, injected rule sets and tool lists the server sends arrived as `NoticeKind.System`, which was drawn as a single plain `Text`: 12sp, muted, `TextAlign.Center`, and with the markdown source unparsed — so the literal `#`, `##` and `-` markers were visible. Dense technical reference was being shown as a centred, grey, unstyled blob. | `Messages.kt:263` | **Fixed in 1.0.7.** System notices now parse as markdown, sit left-aligned at body size, and a long one collapses to a row labelled by the document's own heading. See `NoticeSummary.kt` and `SystemNotice.kt`. |
 
 ---
 
@@ -261,7 +269,7 @@ Remove-Item -Recurse -Force "$env:USERPROFILE\.gradle\caches\8.14.6\transforms"
 
 ---
 
-## 6. Recommended order
+## 6. What was done, in this order
 
 | Step | Work | Why this order |
 |---|---|---|
@@ -272,3 +280,25 @@ Remove-Item -Recurse -Force "$env:USERPROFILE\.gradle\caches\8.14.6\transforms"
 | 5 | Fix #5, #6 — parse throttling, form/permission polling | Both need the split to land cleanly |
 | 6 | Fix #7–#10 — paging errors, session pagination, theme persistence, client reuse | Independent, can run in any order |
 | 7 | Fix #11–#15 — polish, hardening, doc drift | Cheap |
+
+### What the fixes added
+
+- `TimelineReducer.merge` now keeps what is outside the server's window in
+  both directions, and `nextOlderCursor` keeps the paging cursor pointing
+  further back. Nine new reducer tests.
+- `AttachmentPayload` reads a file in chunks and enforces the cap while
+  reading, so a provider that reports no size cannot get past it.
+- The chat state is split into the conversation, the composer, what the agent
+  is blocked on, and the mentions. The view model went from 758 lines to 367
+  code lines, and its 180-line event handler became eight small functions
+  across two classes.
+- `SettingsStore` persists the theme, and the settings screen offers System,
+  Light and Dark rather than a switch that could not go back.
+- The session list walks the server's cursor instead of stopping at 50.
+
+### Still open
+
+- Session search over message bodies. The server's own `search` parameter
+  matches **titles only** (`like(SessionTable.title, ...)` in the server's
+  source), so this needs a different approach than a query parameter.
+- Steered prompts. `"queue"` is used; `"steer"` is not.
