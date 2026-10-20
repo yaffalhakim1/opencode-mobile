@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.0.7]
+
+### Android
+
+- **Fixed: the tool catalogs the server sends were unreadable.** The list of
+  available tools arrived as a wall of small centred text with the markup still
+  showing — literal `#`, `##` and `-` markers, and code samples stranded in the
+  middle of the screen. They now collapse to a single row labelled by the
+  document's own heading, and open into properly rendered markdown when you tap
+  them.
+
+- **The signing key was changed, so this build cannot be installed over an
+  earlier one.** This repository is public now, and the signing key that was
+  committed to it could have been used to sign an update that Android would
+  happily install over the app you already have. The key was replaced and moved
+  out of the repository. Uninstall the previous build before installing this
+  one.
+
 ## [1.0.6]
 
 ### Android
