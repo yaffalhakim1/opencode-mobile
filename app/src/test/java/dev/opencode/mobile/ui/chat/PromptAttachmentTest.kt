@@ -16,7 +16,7 @@ class PromptAttachmentTest {
     private fun attachment(
         name: String = "a.png",
         mime: String = "image/png",
-        sizeBytes: Long = 10,
+        sizeBytes: Long? = 10,
     ) = PendingAttachment(uri = null, name = name, mime = mime, sizeBytes = sizeBytes)
 
     @Test
@@ -47,6 +47,14 @@ class PromptAttachmentTest {
     fun `oversized picks are rejected before sending`() {
         assertTrue(attachment(sizeBytes = PendingAttachment.MAX_BYTES + 1).isTooLarge)
         assertFalse(attachment(sizeBytes = PendingAttachment.MAX_BYTES).isTooLarge)
+    }
+
+    @Test
+    fun `a file of unknown size is not treated as oversized`() {
+        // A missing size is not a pass. The cap is enforced again while the
+        // file is read, so an unknown size is refused later rather than
+        // trusted here.
+        assertFalse(attachment(sizeBytes = null).isTooLarge)
     }
 
     @Test

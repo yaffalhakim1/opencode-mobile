@@ -28,6 +28,7 @@ import dev.opencode.mobile.core.net.ServerConnection
 import dev.opencode.mobile.data.remote.EventStream
 import dev.opencode.mobile.data.remote.OpenCodeApi
 import dev.opencode.mobile.data.settings.ConnectionStore
+import dev.opencode.mobile.data.settings.SettingsStore
 import dev.opencode.mobile.ui.chat.ChatScreen
 import dev.opencode.mobile.ui.chat.ChatViewModel
 import dev.opencode.mobile.ui.connect.ConnectScreen
@@ -60,9 +61,8 @@ private sealed interface Route {
 @Composable
 fun AppRoot(
     connectionStore: ConnectionStore,
+    settingsStore: SettingsStore,
     appContext: android.content.Context,
-    isDark: Boolean,
-    onThemeOverride: (Boolean?) -> Unit,
 ) {
     var connection by remember { mutableStateOf<ServerConnection?>(null) }
     var route by rememberSaveable(stateSaver = RouteSaver) { mutableStateOf<Route>(Route.Connect) }
@@ -157,7 +157,7 @@ fun AppRoot(
             }
 
             Route.Settings -> SettingsScreen(
-                viewModel = viewModel(factory = settingsFactory(connectionStore, isDark, onThemeOverride)),
+                viewModel = viewModel(factory = settingsFactory(connectionStore, settingsStore)),
                 onBack = { route = Route.Sessions },
                 onDisconnected = {
                     connection = null
@@ -238,10 +238,9 @@ private fun chatFactory(
 
 private fun settingsFactory(
     store: ConnectionStore,
-    isDark: Boolean,
-    onThemeOverride: (Boolean?) -> Unit,
+    settings: SettingsStore,
 ) = viewModelFactory {
-    SettingsViewModel(store, isDark, onThemeOverride)
+    SettingsViewModel(store, settings)
 }
 
 /** Small helper so each factory stays a one-liner without boilerplate classes. */

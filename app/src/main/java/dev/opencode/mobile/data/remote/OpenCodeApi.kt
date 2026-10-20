@@ -20,6 +20,7 @@ import dev.opencode.mobile.data.remote.dto.PermissionsPage
 import dev.opencode.mobile.data.remote.dto.ProjectDto
 import dev.opencode.mobile.data.remote.dto.ServerInfoDto
 import dev.opencode.mobile.data.remote.dto.SessionDto
+import dev.opencode.mobile.data.remote.dto.SessionPage
 import dev.opencode.mobile.data.remote.dto.SessionsPage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -55,10 +56,27 @@ class OpenCodeApi(
     suspend fun serverInfo(): ServerInfoDto =
         get("api/info") { body -> json.decodeFromString(ServerInfoDto.serializer(), body) }
 
-    suspend fun listSessions(limit: Int = 50): List<SessionDto> =
-        get("api/session", mapOf("limit" to limit.toString(), "order" to "desc")) { body ->
-            json.decodeFromString(SessionsPage.serializer(), body).data
+    /**
+     * One page of sessions, newest first.
+     *
+     * The first page asks for the newest sessions; every later page passes the
+     * cursor and *no* order, because a cursor carries the filters of the
+     * request that produced it and the server ignores any that are sent with
+     * it.
+     */
+    suspend fun sessionPage(
+        limit: Int = DEFAULT_SESSION_PAGE,
+        cursor: String? = null,
+    ): SessionPage {
+        val query = buildMap {
+            put("limit", limit.toString())
+            if (cursor == null) put("order", "desc") else put("cursor", cursor)
         }
+        return get("api/session", query) { body ->
+            val page = json.decodeFromString(SessionsPage.serializer(), body)
+            SessionPage(page.data, page.cursor?.next)
+        }
+    }
 
     suspend fun createSession(title: String? = null, directory: String? = null): SessionDto {
         val payload = buildJsonObject {
@@ -311,5 +329,8 @@ class OpenCodeApi(
             explicitNulls = false
             coerceInputValues = true
         }
+
+        /** How many sessions one page holds. */
+        const val DEFAULT_SESSION_PAGE = 50
     }
 }

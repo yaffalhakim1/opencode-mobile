@@ -9,10 +9,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.opencode.mobile.data.settings.ThemeChoice
 import dev.opencode.mobile.ui.AppRoot
 import dev.opencode.mobile.ui.theme.OpenCodeTheme
 
@@ -32,9 +32,14 @@ class MainActivity : ComponentActivity() {
         val container = (application as OpenCodeApp).container
 
         setContent {
-            // null means "follow the system"; the settings screen can pin a value.
-            var themeOverride by remember { mutableStateOf<Boolean?>(null) }
-            val dark = themeOverride ?: isSystemInDarkTheme()
+            // The theme comes from the store, so the choice survives a restart
+            // instead of being forgotten with the activity.
+            val theme by container.settingsStore.theme.collectAsStateWithLifecycle(ThemeChoice.System)
+            val dark = when (theme) {
+                ThemeChoice.System -> isSystemInDarkTheme()
+                ThemeChoice.Dark -> true
+                ThemeChoice.Light -> false
+            }
 
             // Icon colour has to follow the app's theme, not the system's: with a
             // pinned dark theme on a light system the icons would be unreadable.
@@ -48,9 +53,8 @@ class MainActivity : ComponentActivity() {
             OpenCodeTheme(darkTheme = dark) {
                 AppRoot(
                     connectionStore = container.connectionStore,
+                    settingsStore = container.settingsStore,
                     appContext = container.appContext,
-                    isDark = dark,
-                    onThemeOverride = { themeOverride = it },
                 )
             }
         }

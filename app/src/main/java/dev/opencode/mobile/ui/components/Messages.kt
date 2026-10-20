@@ -173,6 +173,7 @@ private fun TextBlock(block: AssistantBlock.Text) {
     MarkdownText(
         markdown = block.text,
         modifier = Modifier.padding(vertical = 2.dp),
+        streaming = block.streaming,
     )
 }
 
@@ -228,6 +229,7 @@ private fun ReasoningRow(
             markdown = block.text,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            streaming = block.streaming,
         )
     }
 }

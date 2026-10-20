@@ -171,4 +171,110 @@ class TimelineReducerTest {
         val merged = TimelineReducer.merge(live, server)
         assertEquals(listOf("msg_1"), merged.map { it.id })
     }
+
+    // ---- merge: the pages the user paged in must survive -------------------
+
+    @Test
+    fun `merge keeps the older pages the user already loaded`() {
+        // The user scrolled up and paged in an older page. The server only sent
+        // the newest window, so the older messages exist on one side only.
+        val live = listOf(
+            assistant(id = "old_1"),
+            assistant(id = "old_2"),
+            assistant(id = "old_3"),
+            assistant(id = "new_1"),
+            assistant(id = "new_2"),
+        )
+        val server = listOf(assistant(id = "new_1"), assistant(id = "new_2"))
+
+        val merged = TimelineReducer.merge(live, server)
+        assertEquals(listOf("old_1", "old_2", "old_3", "new_1", "new_2"), merged.map { it.id })
+    }
+
+    @Test
+    fun `merge keeps a reply that is streaming and not projected yet`() {
+        // The resync raced the stream: the server answered before it projected
+        // the message being written, so the live timeline has one the server
+        // has never seen.
+        val live = listOf(
+            assistant(id = "new_1"),
+            assistant(id = "streaming"),
+        )
+        val server = listOf(assistant(id = "new_1"))
+
+        val merged = TimelineReducer.merge(live, server)
+        assertEquals(listOf("new_1", "streaming"), merged.map { it.id })
+    }
+
+    @Test
+    fun `merge keeps both the older pages and the streaming reply`() {
+        val live = listOf(
+            assistant(id = "old_1"),
+            assistant(id = "new_1"),
+            assistant(id = "streaming"),
+        )
+        val server = listOf(assistant(id = "new_1"))
+
+        val merged = TimelineReducer.merge(live, server)
+        assertEquals(listOf("old_1", "new_1", "streaming"), merged.map { it.id })
+    }
+
+    @Test
+    fun `merge drops a live entry inside the window that the server does not have`() {
+        // Inside the window the server is authoritative. A message it does not
+        // have did not happen.
+        val live = listOf(
+            assistant(id = "new_1"),
+            assistant(id = "vanished"),
+            assistant(id = "new_2"),
+        )
+        val server = listOf(assistant(id = "new_1"), assistant(id = "new_2"))
+
+        val merged = TimelineReducer.merge(live, server)
+        assertEquals(listOf("new_1", "new_2"), merged.map { it.id })
+    }
+
+    @Test
+    fun `merge keeps the streamed text of a message inside the window`() {
+        // The window is shared, so the longer streamed text still wins.
+        val live = listOf(
+            assistant(id = "new_1", blocks = listOf(AssistantBlock.Text("Hello there, fri"))),
+        )
+        val server = listOf(assistant(id = "new_1", blocks = listOf(AssistantBlock.Text("Hello there"))))
+
+        val merged = TimelineReducer.merge(live, server)
+        val text = (merged.single() as ChatEntry.Assistant).blocks.single() as AssistantBlock.Text
+        assertEquals("Hello there, fri", text.text)
+    }
+
+    @Test
+    fun `merge with no server messages leaves the timeline alone`() {
+        val live = listOf(assistant(id = "new_1"))
+        assertEquals(live, TimelineReducer.merge(live, emptyList()))
+    }
+
+    @Test
+    fun `merge with no live timeline takes the server window`() {
+        val server = listOf(assistant(id = "new_1"))
+        assertEquals(server, TimelineReducer.merge(emptyList(), server))
+    }
+
+    // ---- the paging cursor ------------------------------------------------
+
+    @Test
+    fun `the cursor keeps pointing further back once history is paged in`() {
+        // Resetting it to the newest page's cursor would make paging loop over
+        // the window already loaded and the start of the session unreachable.
+        assertEquals("cursor_page_2", TimelineReducer.nextOlderCursor("cursor_page_2", "cursor_page_1"))
+    }
+
+    @Test
+    fun `the cursor is taken from the page when nothing is loaded yet`() {
+        assertEquals("cursor_page_1", TimelineReducer.nextOlderCursor(null, "cursor_page_1"))
+    }
+
+    @Test
+    fun `the cursor is empty at the start of the session`() {
+        assertEquals(null, TimelineReducer.nextOlderCursor(null, null))
+    }
 }
