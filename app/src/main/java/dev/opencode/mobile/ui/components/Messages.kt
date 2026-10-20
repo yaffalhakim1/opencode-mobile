@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.opencode.mobile.data.chat.AssistantBlock
@@ -258,43 +259,83 @@ private fun ThinkingRow() {
     }
 }
 
-/** Quiet, centered rows for system notes, shell commands and compaction. */
+/** System documents, shell commands and compaction, each in its own shape. */
 @Composable
 fun NoticeMessage(
     entry: ChatEntry.Notice,
     modifier: Modifier = Modifier,
 ) {
-    val (label, tint) = when (entry.kind) {
-        NoticeKind.System -> null to MaterialTheme.colorScheme.onSurfaceVariant
-        NoticeKind.Skill -> "Skill" to MaterialTheme.colorScheme.tertiary
-        NoticeKind.Shell -> "Shell" to MaterialTheme.colorScheme.secondary
-        NoticeKind.Compaction -> "Context" to MaterialTheme.colorScheme.secondary
-    }
+    when (entry.kind) {
+        // A system message is a document the server injected — a tool catalog, a
+        // rule set. It gets its own row, collapsed and labelled by its own
+        // heading, rather than a centred wall of small text.
+        NoticeKind.System -> SystemNotice(text = entry.text, modifier = modifier)
 
+        NoticeKind.Shell -> ShellNotice(entry.text, modifier)
+
+        NoticeKind.Skill -> QuietNotice(
+            label = "Skill",
+            text = entry.text,
+            tint = MaterialTheme.colorScheme.tertiary,
+            modifier = modifier,
+        )
+
+        NoticeKind.Compaction -> QuietNotice(
+            label = "Context",
+            text = entry.text,
+            tint = MaterialTheme.colorScheme.secondary,
+            modifier = modifier,
+        )
+    }
+}
+
+/** A one-line note: a skill that was applied, or a compaction that happened. */
+@Composable
+private fun QuietNotice(
+    label: String,
+    text: String,
+    tint: Color,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        if (label != null) {
+        Text(
+            text = label.uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            color = tint,
+            textAlign = TextAlign.Center,
+        )
+        if (text.isNotBlank()) {
             Text(
-                text = label.uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                color = tint,
-                textAlign = TextAlign.Center,
-            )
-        }
-        if (entry.kind == NoticeKind.Shell) {
-            CodeBlock(text = entry.text, label = null)
-        } else {
-            Text(
-                text = entry.text,
+                text = text,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 24.dp),
             )
         }
+    }
+}
+
+/** The output of a shell call, as a code surface under a quiet label. */
+@Composable
+private fun ShellNotice(text: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = "SHELL",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.secondary,
+            textAlign = TextAlign.Center,
+        )
+        CodeBlock(text = text, label = null)
     }
 }
