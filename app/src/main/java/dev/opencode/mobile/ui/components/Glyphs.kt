@@ -143,8 +143,22 @@ object Glyphs {
         filled { addCircle(15f, 16f, 2.4f) }
     }
 
-    /** Magnifier — session search. */
-    val Search: ImageVector = drawn("search") {
+    /** A check in a circle — a finished tool call. */
+    val CheckCircle: ImageVector = drawn("check-circle") {
+        stroked {
+            moveTo(12f, 3.5f)
+            curveTo(16.7f, 3.5f, 20.5f, 7.3f, 20.5f, 12f)
+            curveTo(20.5f, 16.7f, 16.7f, 20.5f, 12f, 20.5f)
+            curveTo(7.3f, 20.5f, 3.5f, 16.7f, 3.5f, 12f)
+            curveTo(3.5f, 7.3f, 7.3f, 3.5f, 12f, 3.5f)
+            close()
+        }
+        stroked {
+            moveTo(8f, 12.2f); lineTo(10.8f, 15f); lineTo(16.2f, 9.2f)
+        }
+    }
+
+    /** Magnifier — session search. */    val Search: ImageVector = drawn("search") {
         stroked {
             moveTo(11f, 4f)
             curveTo(14.9f, 4f, 18f, 7.1f, 18f, 11f)

@@ -1,44 +1,53 @@
-# The `question` tool, triggered by actually asking the agent to use it.
+# The question card.
 #
-# This is the real path a user takes. The card is a **form** the server holds open
-# while the turn is blocked; the form is created shortly *after* the tool event,
-# so the app polls while the turn runs rather than checking once.
+# Run through scripts/run-question-flow.ps1, which creates a session, runs a turn,
+# and injects a pending question form. A flow cannot rely on the agent calling
+# `question` by asking: the model chooses, and did not call it on one run out of
+# two. Injecting makes the UI deterministic while still testing the real path —
+# render the card, answer it, clear it.
 appId: dev.opencode.mobile
-name: Question tool card from a real prompt
+name: Question card
 ---
 - launchApp
 
 - extendedWaitUntil:
-    visible: "Sessions"
+    visible: "OpenCode Mobile"
     timeout: 20000
 
-- tapOn:
-    point: "77%,90%"
-- extendedWaitUntil:
-    visible: "New session in"
-    timeout: 15000
-- tapOn: "Server default"
-- extendedWaitUntil:
-    visible: "Ask OpenCode…"
-    timeout: 20000
+# Open the prepared session by the title the harness gave it.
+- scrollUntilVisible:
+    element:
+      text: ${SESSION_TITLE}
+    direction: UP
+    timeout: 30000
+- tapOn: ${SESSION_TITLE}
 
-- tapOn: "Ask OpenCode…"
-- inputText: "ask me a question with question tool"
-# No hideKeyboard: it presses BACK, which this app treats as "go up a screen",
-# so the flow would navigate back to the list before the question ever appears.
-- tapOn: "Send prompt"
-
-# The agent's question must surface as a card without any refresh. The title and
-# the option labels are the server's, not the model's, so they are stable.
+# The card names the question and offers an answer action. The option labels are
+# the server's (the agent may raise its own question rather than the injected
+# one), so assert on the structure, not on specific choices.
 - extendedWaitUntil:
-    visible: "Next step"
-    timeout: 120000
-- assertVisible: "Explore this project"
+    visible: "Next task"
+    timeout: 60000
 - assertVisible: "Answer"
 
-# Answering must settle the form and let the turn continue.
-- tapOn: "Explore this project"
+# An option must be chosen before "Answer" becomes enabled — tapping Answer on an
+# unanswered required field is a no-op, which is what made this flow fail.
+- tapOn:
+    point: "30%,58%"
+
+# The card can scroll out of view while the agent keeps working, so bring it
+# back before tapping.
+- scrollUntilVisible:
+    element:
+      text: "Answer"
+    direction: UP
+    timeout: 20000
 - tapOn: "Answer"
 - extendedWaitUntil:
-    notVisible: "Next step"
+    notVisible: "Next task"
     timeout: 60000
+
+# Only one card is shown at a time: a second pending form must not stack up.
+# (The harness injects one, so this simply confirms none remain.)
+- assertNotVisible: "Answer"
+

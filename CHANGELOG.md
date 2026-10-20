@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.0.6]
+
+### Android
+
+- **A turn now reads as one card instead of a stack of boxes.** The agent works in
+  steps, and each step used to draw its own panel, so a few tool calls filled the
+  screen and the answer got lost between them. Reasoning and tool calls now share
+  one card with a faint divider between rows, so the prose is what you read.
+
+- **Tool rows say what happened.** They read "Ran command", "Read file",
+  "Edited file" rather than the tool's internal name, with a check mark when the
+  step succeeded.
+
+- **The session list is shorter and paged.** Five sessions per group, with
+  "See N more" for the rest, one-line titles, and the folder icon removed — the
+  project name already says where a session lives.
+
+- **The header is the app's name.** "Sessions" plus the connected URL became
+  "OpenCode Mobile"; the URL only ever truncated itself.
+
+- **Code uses IBM Plex Mono, bundled with the app.** It previously used whatever
+  monospace the phone happened to have, so code looked different on every device
+  and matched neither the desktop app nor itself.
+
+- **Fixed: the status bar was darkened in dark mode.** It is transparent now, and
+  its icons follow the app's theme rather than the system's.
+
 ## [1.0.5]
 
 ### Android
@@ -102,4 +129,5 @@ First release.
 - Group sessions by project or by when they were last used, filter them, and
   search titles and project names.
 - Start a new session in a specific project.
+
 

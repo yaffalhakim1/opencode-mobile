@@ -12,7 +12,7 @@ name: Conversation with a real prompt
 - launchApp
 
 - extendedWaitUntil:
-    visible: "Sessions"
+    visible: "OpenCode Mobile"
     timeout: 20000
 
 # Grouping and filtering must not throw with real data loaded.
@@ -114,5 +114,6 @@ name: Conversation with a real prompt
 - hideKeyboard
 - pressKey: BACK
 - extendedWaitUntil:
-    visible: "Sessions"
+    visible: "OpenCode Mobile"
     timeout: 15000
+

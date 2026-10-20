@@ -34,6 +34,7 @@ name: Pair and land on sessions
 # Landing on the list proves the token was accepted by /api/info, saved, and
 # that AppRoot reloaded the connection instead of bouncing back.
 - extendedWaitUntil:
-    visible: "Sessions"
+    visible: "OpenCode Mobile"
     timeout: 30000
 - assertNotVisible: "Connect to your server"
+

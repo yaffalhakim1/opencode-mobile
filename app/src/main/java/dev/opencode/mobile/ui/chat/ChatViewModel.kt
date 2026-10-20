@@ -60,7 +60,15 @@ data class ChatUiState(
     val forms: List<FormDto> = emptyList(),
     /** Permission requests the agent is blocked on. */
     val permissions: List<PermissionRequestDto> = emptyList(),
-)
+) {
+    /**
+     * The timeline folded into render rows.
+     *
+     * Consecutive assistant messages become one run so a turn is a single card;
+     * see `ChatRow` for why the server's per-step messages need folding.
+     */
+    val rows: List<ChatRow> by lazy { buildChatRows(entries) }
+}
 
 class ChatViewModel(
     private val sessionID: String,

@@ -49,6 +49,9 @@ import dev.opencode.mobile.ui.components.Glyphs
 import dev.opencode.mobile.ui.components.StateMessage
 import dev.opencode.mobile.ui.theme.extendedColors
 
+/** Rows shown per section before "See more". */
+private const val SECTION_PAGE = 5
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionListScreen(
@@ -70,16 +73,9 @@ fun SessionListScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text("Sessions", style = MaterialTheme.typography.titleLarge)
-                        Text(
-                            text = viewModel.serverLabel(),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
+                    // Just the app name: the connected URL was noise, and it
+                    // truncated the one label the screen needs to carry.
+                    Text("OpenCode Mobile", style = MaterialTheme.typography.titleLarge)
                 },
                 actions = {
                     IconButton(onClick = { searchOpen = !searchOpen }) {
@@ -166,13 +162,17 @@ fun SessionListScreen(
                             top = 4.dp,
                             bottom = 96.dp,
                         ),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         sections.forEach { section ->
+                            val expanded = section.title in state.expandedSections
+                            val shown = if (expanded) section.sessions else section.sessions.take(SECTION_PAGE)
+                            val hidden = section.sessions.size - shown.size
+
                             item(key = "header-${section.title}") {
                                 SectionHeader(section.title, section.sessions.size)
                             }
-                            items(section.sessions, key = { it.id }) { session ->
+                            items(shown, key = { it.id }) { session ->
                                 SessionRow(
                                     session = session,
                                     running = session.id in state.running,
@@ -186,6 +186,14 @@ fun SessionListScreen(
                                     },
                                     onDelete = { viewModel.deleteSession(session.id) },
                                 )
+                            }
+                            if (hidden > 0) {
+                                item(key = "more-${section.title}") {
+                                    SeeMoreRow(
+                                        hidden = hidden,
+                                        onClick = { viewModel.expandSection(section.title) },
+                                    )
+                                }
                             }
                         }
                     }
@@ -293,9 +301,33 @@ private fun ListControls(
     }
 }
 
+/** Shows how many rows a section hides behind "See more". */
 @Composable
-private fun SectionHeader(title: String, count: Int) {
+private fun SeeMoreRow(hidden: Int, onClick: () -> Unit) {
     Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = "See $hidden more",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Icon(
+            imageVector = Glyphs.ChevronDown,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String, count: Int) {    Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 12.dp, bottom = 2.dp, start = 4.dp),
@@ -327,7 +359,9 @@ private fun SessionRow(
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), MaterialTheme.shapes.medium)
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            // 10dp vertical, not 14: rows are a scannable index, and five per
+            // section has to fit without the card dominating the screen.
+            .padding(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -346,27 +380,30 @@ private fun SessionRow(
                 }
                 Text(
                     text = session.title?.takeIf { it.isNotBlank() } ?: "Untitled session",
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                    ),
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
+                    // One line: a wrapped title is what made rows tall.
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Spacer(Modifier.height(4.dp))
+            // 6dp: the title and its metadata read as one block, but at 2dp the
+            // folder/time line sat tight against the title.
+            Spacer(Modifier.height(6.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
+                // No folder icon: the project name already says where it is, and
+                // the glyph on every row was visual noise.
                 session.location?.displayName?.takeIf { it.isNotBlank() }?.let { folder ->
-                    Icon(
-                        imageVector = Glyphs.Folder,
-                        contentDescription = null,
-                        modifier = Modifier.size(13.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                     Text(
                         text = folder,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,
+                        ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -375,25 +412,29 @@ private fun SessionRow(
                 }
                 Text(
                     text = relativeTime(session.time.updated ?: session.time.created),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,
+                    ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (session.cost > 0.0) {
                     Dot()
                     Text(
                         text = "$${"%.2f".format(session.cost)}",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,
+                        ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
         }
 
-        IconButton(onClick = onDelete) {
+        IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
             Icon(
                 imageVector = Glyphs.Close,
                 contentDescription = "Delete session",
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(16.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
             )
         }

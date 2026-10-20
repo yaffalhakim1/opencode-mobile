@@ -12,7 +12,7 @@ name: Reply streams without refresh
 - launchApp
 
 - extendedWaitUntil:
-    visible: "Sessions"
+    visible: "OpenCode Mobile"
     timeout: 20000
 
 # New session, default project.
@@ -53,3 +53,4 @@ name: Reply streams without refresh
 
 - assertNotVisible: "Working"
 - assertVisible: "Thought process"
+

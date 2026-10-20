@@ -244,7 +244,23 @@ pwsh -File scripts/run-tools-flow.ps1          # tools + the question card
 | `pair.yaml` | Pasting a pairing link stores a token and lands on the list |
 | `streaming.yaml` | A reply appears on its own, with no refresh — the regression for dropped deltas |
 | `conversation.yaml` | Two real prompts stream, both survive a refresh, back works |
-| `tools.yaml` | A tool card expands to Arguments/Result; the question card renders and answers |
+| `question.yaml` | The question card renders, answers, and clears (`scripts/run-question-flow.ps1`) |
+| `permission.yaml` | The permission card renders and a decision clears it |
+| `tools.yaml` | A tool card expands to Arguments/Result (`scripts/run-tools-flow.ps1`) |
+
+Two flows need a harness rather than a bare prompt, because whether the agent
+raises a question or a permission request depends on the model and on the
+server's permission rules:
+
+```powershell
+pwsh -File scripts/run-question-flow.ps1   # injects a pending question form
+pwsh -File scripts/run-tools-flow.ps1      # prompts a shell call, injects a form
+```
+
+`question.yaml` originally asked the agent to use the tool, which passed once and
+then failed because the model answered directly instead. Injecting the form makes
+the UI deterministic while still exercising the path the app owns: render the
+card, submit the answer, clear it.
 
 Two things make these flows fussier than they look, and both have cost time:
 

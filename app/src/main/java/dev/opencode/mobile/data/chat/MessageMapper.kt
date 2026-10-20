@@ -31,7 +31,7 @@ object MessageMapper {
 
             "assistant" -> ChatEntry.Assistant(
                 id = id,
-                blocks = contentBlocks(message),
+                blocks = contentBlocks(message, id),
                 createdAt = createdAt,
                 isStreaming = message["time"]?.obj()?.get("completed") == null,
                 modelLabel = message["model"]?.obj()?.string("id"),
@@ -69,13 +69,13 @@ object MessageMapper {
         }
     }
 
-    private fun contentBlocks(message: JsonObject): List<AssistantBlock> =
+    private fun contentBlocks(message: JsonObject, id: String): List<AssistantBlock> =
         message["content"]?.arr()?.mapNotNull { element ->
             when (val block = element.obj()) {
                 null -> null
                 else -> when (block.string("type")) {
                     "text" -> AssistantBlock.Text(block.string("text").orEmpty())
-                    "reasoning" -> AssistantBlock.Reasoning(block.string("text").orEmpty())
+                    "reasoning" -> AssistantBlock.Reasoning(block.string("text").orEmpty(), messageID = id)
                     "tool" -> toolBlock(block)
                     else -> null
                 }
@@ -141,3 +141,5 @@ object MessageMapper {
 
     private fun JsonObject.double(key: String): Double? = (this[key] as? JsonPrimitive)?.doubleOrNull
 }
+
+

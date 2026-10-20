@@ -80,14 +80,15 @@ internal val AppTypography = Typography(
 /** Monospace styles for code blocks and tool output. */
 internal object CodeType {
     val block = TextStyle(
-        fontFamily = FontFamily.Monospace,
+        fontFamily = PlexMono,
         fontWeight = FontWeight.Normal,
         fontSize = 13.sp,
         lineHeight = 20.sp,
     )
     val inline = TextStyle(
-        fontFamily = FontFamily.Monospace,
+        fontFamily = PlexMono,
         fontSize = 13.sp,
         lineHeight = 20.sp,
     )
 }
+

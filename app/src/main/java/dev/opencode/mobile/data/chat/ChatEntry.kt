@@ -42,6 +42,8 @@ sealed interface AssistantBlock {
         val ordinal: Int = 0,
         val streaming: Boolean = false,
         val expanded: Boolean = false,
+        /** Owning message: a run spans several, so ordinal alone is ambiguous. */
+        val messageID: String = "",
     ) : AssistantBlock
 
     data class Tool(

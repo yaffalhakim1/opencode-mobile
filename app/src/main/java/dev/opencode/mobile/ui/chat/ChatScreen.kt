@@ -196,19 +196,19 @@ fun ChatScreen(
                         top = 12.dp,
                         bottom = 16.dp,
                     ),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    items(state.entries, key = { it.id }) { entry ->
-                        when (entry) {
-                            is ChatEntry.User -> UserMessage(entry)
-                            is ChatEntry.Assistant -> AssistantMessage(
-                                entry = entry,
-                                onToggleReasoning = { ordinal ->
-                                    viewModel.toggleReasoning(entry.id, ordinal)
+                    items(state.rows, key = { it.key }) { row ->
+                        when (row) {
+                            is ChatRow.User -> UserMessage(row.entry)
+                            is ChatRow.AssistantRun -> AssistantMessage(
+                                entries = row.entries,
+                                onToggleReasoning = { messageID, ordinal ->
+                                    viewModel.toggleReasoning(messageID, ordinal)
                                 },
                             )
 
-                            is ChatEntry.Notice -> NoticeMessage(entry)
+                            is ChatRow.Notice -> NoticeMessage(row.entry)
                         }
                     }
 
@@ -222,11 +222,16 @@ fun ChatScreen(
                         )
                     }
 
-                    items(state.forms, key = { "form-${it.id}" }) { form ->
-                        QuestionCard(
-                            form = form,
-                            onAnswer = { answer -> viewModel.answerForm(form, answer) },
-                        )
+                    // One question card at a time: a card per pending form made a
+                    // run of questions fill the screen. The next one appears once
+                    // the current one is answered.
+                    state.forms.firstOrNull()?.let { form ->
+                        item(key = "form-${form.id}") {
+                            QuestionCard(
+                                form = form,
+                                onAnswer = { answer -> viewModel.answerForm(form, answer) },
+                            )
+                        }
                     }
                 }
             }

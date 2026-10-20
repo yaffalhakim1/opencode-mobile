@@ -3,7 +3,6 @@ package dev.opencode.mobile.ui.sessions
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.opencode.mobile.core.net.OpenCodeException
-import dev.opencode.mobile.core.net.ServerConnection
 import dev.opencode.mobile.data.remote.OpenCodeApi
 import dev.opencode.mobile.data.remote.dto.ProjectDto
 import dev.opencode.mobile.data.remote.dto.SessionDto
@@ -25,6 +24,8 @@ data class SessionsUiState(
     val grouping: SessionGrouping = SessionGrouping.Updated,
     val filter: SessionFilter = SessionFilter.All,
     val query: String = "",
+    /** Section titles the user has expanded past the first page. */
+    val expandedSections: Set<String> = emptySet(),
 ) {
     val isEmpty: Boolean get() = !isLoading && sessions.isEmpty() && error == null
 
@@ -32,9 +33,7 @@ data class SessionsUiState(
     fun sections(now: Long): List<SessionSection> =
         SessionListShaper.apply(sessions, grouping, filter, query, running, now)
 }
-
 class SessionListViewModel(
-    private val connection: ServerConnection,
     private val api: OpenCodeApi,
 ) : ViewModel() {
 
@@ -91,7 +90,12 @@ class SessionListViewModel(
     }
 
     fun setQuery(query: String) {
-        _state.update { it.copy(query = query) }
+        _state.update { it.copy(query = query, expandedSections = emptySet()) }
+    }
+
+    /** Reveals the rest of one section. */
+    fun expandSection(title: String) {
+        _state.update { it.copy(expandedSections = it.expandedSections + title) }
     }
 
     /** Loaded once, lazily, when the user opens the project picker. */
@@ -134,5 +138,4 @@ class SessionListViewModel(
         }
     }
 
-    fun serverLabel(): String = connection.baseUrl
 }

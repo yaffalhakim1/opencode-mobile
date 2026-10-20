@@ -129,7 +129,11 @@ fun DisclosureRow(
             leading?.invoke()
             Text(
                 text = title,
-                style = MaterialTheme.typography.labelMedium,
+                // Normal weight, not bold: the header is a label on a row, and
+                // bold made a stack of rows compete with the prose around it.
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,
+                ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -150,7 +154,9 @@ fun DisclosureRow(
             enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically(),
         ) {
-            Box(modifier = Modifier.padding(bottom = 8.dp)) { content() }
+            // Top padding separates the header from the body; at 0 the first line
+            // of reasoning sat directly against the header.
+            Box(modifier = Modifier.padding(top = 6.dp, bottom = 8.dp)) { content() }
         }
     }
 }
@@ -191,6 +197,13 @@ fun StatusPill(
  * and a header rhythm; only the leading glyph and status pill differ. Keeping
  * the surface in one place is what stops the two from drifting apart again.
  */
+/**
+ * The one card a run of activity collapses into.
+ *
+ * Borderless on purpose: the reference design separates rows with hairlines
+ * inside a single tinted panel, and an outline around every card made a long run
+ * look like a stack of boxes.
+ */
 @Composable
 fun AgentActivityCard(
     modifier: Modifier = Modifier,
@@ -200,11 +213,6 @@ fun AgentActivityCard(
         modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.extendedColors.cardSurface, MaterialTheme.shapes.medium)
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.extendedColors.cardBorder,
-                shape = MaterialTheme.shapes.medium,
-            )
             .padding(horizontal = 12.dp, vertical = 2.dp),
     ) {
         content()

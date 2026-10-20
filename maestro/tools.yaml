@@ -10,7 +10,7 @@ name: Tool calls including question
 - launchApp
 
 - extendedWaitUntil:
-    visible: "Sessions"
+    visible: "OpenCode Mobile"
     timeout: 20000
 
 # Open the prepared session. The server renames a session after the first turn,
@@ -60,3 +60,4 @@ name: Tool calls including question
 - extendedWaitUntil:
     visible: "finished"
     timeout: 120000
+

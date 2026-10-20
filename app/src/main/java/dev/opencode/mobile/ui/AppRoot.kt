@@ -217,7 +217,7 @@ private fun connectFactory(store: ConnectionStore) = viewModelFactory {
 
 private fun sessionsFactory(connection: ServerConnection) = viewModelFactory {
     val client = HttpClientFactory.create(connection)
-    SessionListViewModel(connection, OpenCodeApi(connection, client))
+    SessionListViewModel(OpenCodeApi(connection, client))
 }
 
 private fun chatFactory(
@@ -251,3 +251,4 @@ private inline fun <reified VM : ViewModel> viewModelFactory(
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T = create() as T
 }
+

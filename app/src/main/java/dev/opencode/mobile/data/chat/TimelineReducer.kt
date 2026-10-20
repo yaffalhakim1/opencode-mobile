@@ -84,7 +84,7 @@ object TimelineReducer {
     ): List<ChatEntry> = mapAssistant(entries, messageID) { assistant ->
         assistant.withBlock(
             match = { it is AssistantBlock.Reasoning && it.ordinal == ordinal },
-            create = { AssistantBlock.Reasoning(text = delta, ordinal = ordinal, streaming = true) },
+            create = { AssistantBlock.Reasoning(text = delta, ordinal = ordinal, streaming = true, messageID = messageID) },
             update = { block ->
                 (block as AssistantBlock.Reasoning).copy(text = block.text + delta, streaming = true)
             },
@@ -99,7 +99,7 @@ object TimelineReducer {
     ): List<ChatEntry> = mapAssistant(entries, messageID) { assistant ->
         assistant.withBlock(
             match = { it is AssistantBlock.Reasoning && it.ordinal == ordinal },
-            create = { AssistantBlock.Reasoning(text = text, ordinal = ordinal) },
+            create = { AssistantBlock.Reasoning(text = text, ordinal = ordinal, messageID = messageID) },
             update = { block ->
                 (block as AssistantBlock.Reasoning).copy(text = text, streaming = false)
             },
@@ -214,3 +214,4 @@ object TimelineReducer {
         return copy(blocks = next)
     }
 }
+

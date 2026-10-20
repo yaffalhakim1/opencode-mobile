@@ -23,7 +23,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -33,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.opencode.mobile.ui.components.CodeBlock
 import dev.opencode.mobile.ui.theme.extendedColors
+import dev.opencode.mobile.ui.theme.PlexMono
 
 /**
  * Renders a markdown document as Compose content.
@@ -360,7 +360,7 @@ private fun MdSpan.toSpanStyle(palette: SpanPalette): SpanStyle {
                 MdSpanStyle.Strikethrough ->
                     SpanStyle(textDecoration = TextDecoration.LineThrough)
                 MdSpanStyle.Code -> SpanStyle(
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = PlexMono,
                     fontSize = 14.sp,
                     color = palette.code,
                     background = palette.codeBackground,
@@ -374,3 +374,4 @@ private fun MdSpan.toSpanStyle(palette: SpanPalette): SpanStyle {
     }
     return result
 }
+
