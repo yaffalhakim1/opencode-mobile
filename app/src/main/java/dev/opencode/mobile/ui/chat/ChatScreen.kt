@@ -51,6 +51,7 @@ import dev.opencode.mobile.ui.components.AssistantMessage
 import dev.opencode.mobile.ui.components.ChatComposer
 import dev.opencode.mobile.ui.components.Glyphs
 import dev.opencode.mobile.ui.components.NoticeMessage
+import dev.opencode.mobile.ui.components.PermissionCard
 import dev.opencode.mobile.ui.components.QuestionCard
 import dev.opencode.mobile.ui.components.StateMessage
 import dev.opencode.mobile.ui.components.UserMessage
@@ -211,8 +212,16 @@ fun ChatScreen(
                         }
                     }
 
-                    // Questions sit at the end: the agent is blocked on them, so
-                    // they belong where the user is already looking.
+                    // Questions and permission requests sit at the end: the agent
+                    // is blocked on them, so they belong where the user is
+                    // already looking.
+                    items(state.permissions, key = { "perm-${it.id}" }) { request ->
+                        PermissionCard(
+                            request = request,
+                            onDecide = { decision -> viewModel.answerPermission(request, decision) },
+                        )
+                    }
+
                     items(state.forms, key = { "form-${it.id}" }) { form ->
                         QuestionCard(
                             form = form,

@@ -1,0 +1,44 @@
+# The `question` tool, triggered by actually asking the agent to use it.
+#
+# This is the real path a user takes. The card is a **form** the server holds open
+# while the turn is blocked; the form is created shortly *after* the tool event,
+# so the app polls while the turn runs rather than checking once.
+appId: dev.opencode.mobile
+name: Question tool card from a real prompt
+---
+- launchApp
+
+- extendedWaitUntil:
+    visible: "Sessions"
+    timeout: 20000
+
+- tapOn:
+    point: "77%,90%"
+- extendedWaitUntil:
+    visible: "New session in"
+    timeout: 15000
+- tapOn: "Server default"
+- extendedWaitUntil:
+    visible: "Ask OpenCode…"
+    timeout: 20000
+
+- tapOn: "Ask OpenCode…"
+- inputText: "ask me a question with question tool"
+# No hideKeyboard: it presses BACK, which this app treats as "go up a screen",
+# so the flow would navigate back to the list before the question ever appears.
+- tapOn: "Send prompt"
+
+# The agent's question must surface as a card without any refresh. The title and
+# the option labels are the server's, not the model's, so they are stable.
+- extendedWaitUntil:
+    visible: "Next step"
+    timeout: 120000
+- assertVisible: "Explore this project"
+- assertVisible: "Answer"
+
+# Answering must settle the form and let the turn continue.
+- tapOn: "Explore this project"
+- tapOn: "Answer"
+- extendedWaitUntil:
+    notVisible: "Next step"
+    timeout: 60000

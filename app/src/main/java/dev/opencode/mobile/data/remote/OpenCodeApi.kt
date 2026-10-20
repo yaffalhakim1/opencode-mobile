@@ -14,6 +14,9 @@ import dev.opencode.mobile.data.remote.dto.ModelsPage
 import dev.opencode.mobile.data.remote.dto.PairingSessionDto
 import dev.opencode.mobile.data.remote.dto.PromptAcceptedDto
 import dev.opencode.mobile.data.remote.dto.PromptFileDto
+import dev.opencode.mobile.data.remote.dto.PermissionDecision
+import dev.opencode.mobile.data.remote.dto.PermissionRequestDto
+import dev.opencode.mobile.data.remote.dto.PermissionsPage
 import dev.opencode.mobile.data.remote.dto.ProjectDto
 import dev.opencode.mobile.data.remote.dto.ServerInfoDto
 import dev.opencode.mobile.data.remote.dto.SessionDto
@@ -188,6 +191,30 @@ class OpenCodeApi(
 
     suspend fun deleteSession(sessionID: String) {
         delete("api/session/$sessionID")
+    }
+
+    /**
+     * Permission requests the agent is blocked on.
+     *
+     * Like a form, this is a request the server holds open, not a message.
+     */
+    suspend fun pendingPermissions(sessionID: String): List<PermissionRequestDto> =
+        get("api/session/$sessionID/permission") { body ->
+            json.decodeFromString(PermissionsPage.serializer(), body).data
+        }
+
+    /** Answers a permission request; the blocked turn continues either way. */
+    suspend fun replyToPermission(
+        sessionID: String,
+        requestID: String,
+        decision: PermissionDecision,
+        message: String? = null,
+    ) {
+        val payload = buildJsonObject {
+            put("decision", decision.wire)
+            if (!message.isNullOrBlank()) put("message", message)
+        }
+        post("api/session/$sessionID/permission/$requestID/reply", payload) { }
     }
 
     /**

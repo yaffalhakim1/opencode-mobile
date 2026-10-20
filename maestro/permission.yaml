@@ -1,0 +1,40 @@
+# A permission request, triggered by a tool touching a path the rules mark "ask".
+#
+# Reading `.env` is `ask` in this server's config, so the agent stops and waits.
+# Without a card the session looks hung — which is what happened before.
+appId: dev.opencode.mobile
+name: Permission card from a real prompt
+---
+- launchApp
+
+- extendedWaitUntil:
+    visible: "Sessions"
+    timeout: 20000
+
+- tapOn:
+    point: "77%,90%"
+- extendedWaitUntil:
+    visible: "New session in"
+    timeout: 15000
+- tapOn: "Server default"
+- extendedWaitUntil:
+    visible: "Ask OpenCode…"
+    timeout: 20000
+
+- tapOn: "Ask OpenCode…"
+- inputText: "Read the file .env in the workspace and tell me its first line"
+# No hideKeyboard: it presses BACK, which navigates away from the session.
+- tapOn: "Send prompt"
+
+# The card names what is being asked, with all three decisions.
+- extendedWaitUntil:
+    visible: "Needs permission"
+    timeout: 120000
+- assertVisible: "Allow once"
+- assertVisible: "Always allow"
+
+# Answering must clear the card and let the turn continue.
+- tapOn: "Allow once"
+- extendedWaitUntil:
+    notVisible: "Needs permission"
+    timeout: 60000

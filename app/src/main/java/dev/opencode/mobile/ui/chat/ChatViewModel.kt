@@ -17,6 +17,8 @@ import dev.opencode.mobile.data.remote.StreamSignal
 import dev.opencode.mobile.data.remote.dto.PromptFileDto
 import dev.opencode.mobile.data.remote.dto.FormDto
 import dev.opencode.mobile.data.remote.dto.FormValueDto
+import dev.opencode.mobile.data.remote.dto.PermissionDecision
+import dev.opencode.mobile.data.remote.dto.PermissionRequestDto
 import dev.opencode.mobile.data.remote.dto.StreamEventDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -56,6 +58,8 @@ data class ChatUiState(
     val loadingOlder: Boolean = false,
     /** Questions the agent is blocked on. Empty when the turn is not asking. */
     val forms: List<FormDto> = emptyList(),
+    /** Permission requests the agent is blocked on. */
+    val permissions: List<PermissionRequestDto> = emptyList(),
 )
 
 class ChatViewModel(
@@ -76,11 +80,15 @@ class ChatViewModel(
     /** Debounced reconciliation while a turn is live; see [scheduleResync]. */
     private var resyncJob: Job? = null
 
+    /** Polls for a pending question while a turn is blocked on one. */
+    private var formsJob: Job? = null
+
     init {
         refresh()
         loadCatalog()
         connectStream()
         refreshForms()
+        refreshPermissions()
     }
 
     fun onDraftChange(value: String) {
@@ -313,9 +321,40 @@ class ChatViewModel(
             try {
                 api.replyToForm(sessionID, form.id, answer)
                 _state.update { it.copy(forms = it.forms.filterNot { f -> f.id == form.id }) }
+                // Answering unblocks the turn, which may immediately raise the
+                // next question, so keep watching.
+                watchForForms()
             } catch (e: Exception) {
                 _state.update { it.copy(error = e.message ?: "Could not send that answer.") }
             }
+        }
+    }
+
+    /**
+     * Watches for a form while a turn is running.
+     *
+     * The `question` tool blocks the turn, and its form is created *after* the
+     * tool event fires — a single check on that event races the server and
+     * usually finds nothing. Because a blocked tool means the turn stays open,
+     * polling for as long as it runs is both correct and cheap: an idle turn
+     * returns an empty list immediately.
+     */
+    private fun watchForForms() {
+        if (formsJob?.isActive == true) return
+        formsJob = viewModelScope.launch {
+            while (isActive && _state.value.isRunning) {
+                runCatching { api.pendingForms(sessionID) }
+                    .onSuccess { forms ->
+                        if (forms.isNotEmpty() || _state.value.forms.isNotEmpty()) {
+                            _state.update { it.copy(forms = forms) }
+                        }
+                    }
+                delay(FORM_POLL_MS)
+            }
+            // One last check after the turn settles, so a form raised right at
+            // the end is not missed.
+            runCatching { api.pendingForms(sessionID) }
+                .onSuccess { forms -> _state.update { it.copy(forms = forms) } }
         }
     }
 
@@ -324,6 +363,33 @@ class ChatViewModel(
         viewModelScope.launch {
             runCatching { api.pendingForms(sessionID) }
                 .onSuccess { forms -> _state.update { it.copy(forms = forms) } }
+        }
+    }
+
+    /**
+     * Answers a permission request.
+     *
+     * The turn is blocked until this resolves, so a failure is surfaced rather
+     * than swallowed — otherwise the session stays stuck with no explanation.
+     */
+    fun answerPermission(request: PermissionRequestDto, decision: PermissionDecision) {
+        viewModelScope.launch {
+            try {
+                api.replyToPermission(sessionID, request.id, decision)
+                _state.update {
+                    it.copy(permissions = it.permissions.filterNot { p -> p.id == request.id })
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(error = e.message ?: "Could not send that decision.") }
+            }
+        }
+    }
+
+    /** Permissions are only listed while the agent is waiting. */
+    private fun refreshPermissions() {
+        viewModelScope.launch {
+            runCatching { api.pendingPermissions(sessionID) }
+                .onSuccess { requests -> _state.update { it.copy(permissions = requests) } }
         }
     }
 
@@ -468,7 +534,7 @@ class ChatViewModel(
     }
 
     private fun handleEvent(event: StreamEventDto) {
-        val sessionIDFromEvent = event.sessionID() ?: return
+        val sessionIDFromEvent = event.subjectSessionID() ?: return
         if (sessionIDFromEvent != sessionID) return
 
         when (event.type) {
@@ -600,13 +666,36 @@ class ChatViewModel(
                 it.copy(queued = (it.queued - 1).coerceAtLeast(0))
             }
 
-            // A `question` tool blocks the turn, so the form only appears after
-            // the tool starts. Checking on tool events is what makes the prompt
-            // show up while the agent is waiting rather than after it gives up.
-            "session.tool.called",
-            "session.tool.input.started",
-            "session.execution.started",
-            -> refreshForms()
+            // A `question` tool raises a form and blocks the turn. The event
+            // carries the whole form, so it can be rendered immediately — no
+            // fetch, and no race with the form being created after the tool
+            // event (which is why polling on tool events missed it).
+            "form.created" -> events.form(event)?.let { form ->
+                _state.update { current ->
+                    if (current.forms.any { it.id == form.id }) current
+                    else current.copy(forms = current.forms + form)
+                }
+            }
+
+            "form.settled", "form.replied", "form.cancelled" -> events.formID(event)?.let { id ->
+                _state.update { it.copy(forms = it.forms.filterNot { f -> f.id == id }) }
+            }
+
+            // A permission request blocks the turn exactly like a question. The
+            // event carries the whole request, so it renders immediately.
+            "permission.asked" -> events.permission(event)?.let { request ->
+                _state.update { current ->
+                    if (current.permissions.any { it.id == request.id }) current
+                    else current.copy(permissions = current.permissions + request)
+                }
+            }
+
+            "permission.replied", "permission.settled", "permission.cancelled" ->
+                events.permissionID(event)?.let { id ->
+                    _state.update {
+                        it.copy(permissions = it.permissions.filterNot { p -> p.id == id })
+                    }
+                }
 
             "session.inbox.cancelled" -> _state.update {
                 it.copy(queued = (it.queued - 1).coerceAtLeast(0))
@@ -631,6 +720,8 @@ class ChatViewModel(
 
     override fun onCleared() {
         streamJob?.cancel()
+        resyncJob?.cancel()
+        formsJob?.cancel()
         super.onCleared()
     }
 
@@ -639,12 +730,27 @@ class ChatViewModel(
 
         /** Long enough that a burst of deltas triggers one refetch, not dozens. */
         const val RESYNC_DELAY_MS = 900L
+
+        /** Cheap enough to poll while a turn is blocked on a question. */
+        const val FORM_POLL_MS = 1_500L
     }
 }
 
 /** The session this event belongs to lives on `data.sessionID`. */
 private fun StreamEventDto.sessionID(): String? =
     (data as? JsonObject)?.get("sessionID")?.jsonPrimitive?.contentOrNull
+
+/**
+ * Session id for events that nest their subject.
+ *
+ * `form.created` carries `data.form.sessionID` rather than `data.sessionID`, so
+ * a handler that only reads the flat field drops the event entirely — which is
+ * exactly how the question card failed to appear.
+ */
+private fun StreamEventDto.subjectSessionID(): String? =
+    sessionID()
+        ?: ((data as? JsonObject)?.get("form") as? JsonObject)
+            ?.get("sessionID")?.jsonPrimitive?.contentOrNull
 
 private fun StreamEventDto.stringField(name: String): String? =
     (data as? JsonObject)?.get(name)?.jsonPrimitive?.contentOrNull

@@ -3,6 +3,8 @@ package dev.opencode.mobile.data.remote
 import dev.opencode.mobile.core.net.HttpClientFactory
 import dev.opencode.mobile.core.net.ServerConnection
 import dev.opencode.mobile.data.remote.dto.StreamEventDto
+import dev.opencode.mobile.data.remote.dto.FormDto
+import dev.opencode.mobile.data.remote.dto.PermissionRequestDto
 import dev.opencode.mobile.data.remote.dto.TextDeltaPayload
 import dev.opencode.mobile.data.remote.dto.TextEndedPayload
 import dev.opencode.mobile.data.remote.dto.ToolEventPayload
@@ -12,6 +14,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -70,6 +74,36 @@ class EventStream(
 
     fun textDelta(event: StreamEventDto): TextDeltaPayload? =
         decode(event, TextDeltaPayload.serializer())
+
+    /** A `form.created` event carries the whole form. */
+    fun form(event: StreamEventDto): FormDto? {
+        val data = event.data as? kotlinx.serialization.json.JsonObject ?: return null
+        val element = data["form"] ?: return null
+        return runCatching { json.decodeFromJsonElement(FormDto.serializer(), element) }.getOrNull()
+    }
+
+    /** Form lifecycle events identify the form by id only. */
+    fun formID(event: StreamEventDto): String? {
+        val data = event.data as? kotlinx.serialization.json.JsonObject ?: return null
+        return data["formID"]?.jsonPrimitive?.contentOrNull
+            ?: (data["form"] as? kotlinx.serialization.json.JsonObject)
+                ?.get("id")?.jsonPrimitive?.contentOrNull
+    }
+
+    /** A `permission.asked` event carries the whole request, flat on `data`. */
+    fun permission(event: StreamEventDto): PermissionRequestDto? {
+        val data = event.data ?: return null
+        return runCatching { json.decodeFromJsonElement(PermissionRequestDto.serializer(), data) }
+            .getOrNull()
+            ?.takeIf { it.id.isNotBlank() }
+    }
+
+    /** Permission lifecycle events identify the request by id only. */
+    fun permissionID(event: StreamEventDto): String? {
+        val data = event.data as? kotlinx.serialization.json.JsonObject ?: return null
+        return data["requestID"]?.jsonPrimitive?.contentOrNull
+            ?: data["id"]?.jsonPrimitive?.contentOrNull
+    }
 
     fun textEnded(event: StreamEventDto): TextEndedPayload? =
         decode(event, TextEndedPayload.serializer())

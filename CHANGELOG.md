@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.0.5]
+
+### Android
+
+- **Fixed: the agent's questions never appeared.** When the agent asked you
+  something it waited for an answer, and the phone showed only a tool card stuck
+  on "running" — so the session looked hung with no way forward. The app was
+  listening for the wrong signal and also discarded the event because the session
+  id sits in a different place on it. Questions now render as a card with their
+  choices, and answering lets the agent continue.
+
+- **The agent's permission requests now appear too.** Reading a file the rules
+  mark as "ask" stops the agent until you allow or deny it. The phone showed
+  nothing, so the same session looked frozen. Requests now render as a card that
+  names what is being asked, with **Deny**, **Allow once** and **Always allow**,
+  and it says which pattern "always" would remember.
+
 ## [1.0.4]
 
 ### Android
@@ -85,3 +102,4 @@ First release.
 - Group sessions by project or by when they were last used, filter them, and
   search titles and project names.
 - Start a new session in a specific project.
+
