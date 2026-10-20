@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://yaffalhakim1.github.io/opencode-mobile/sitemap.xml

@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+<title>OpenCode Mobile — a native Android client for your self-hosted agent</title>
+<meta name="description" content="OpenCode Mobile is a native Android client for a self-hosted OpenCode server. Stream replies, answer the agent's questions, and review tool calls from your phone. Your machine does the work; nothing leaves your network." />
+<link rel="canonical" href="https://yaffalhakim1.github.io/opencode-mobile/" />
+<meta name="theme-color" content="#0B0F0C" />
+<meta name="color-scheme" content="dark light" />
+
+<meta property="og:type" content="website" />
+<meta property="og:title" content="OpenCode Mobile — a native Android client for your self-hosted agent" />
+<meta property="og:description" content="Stream replies, answer the agent's questions, and review tool calls from your phone. Your machine does the work." />
+<meta property="og:url" content="https://yaffalhakim1.github.io/opencode-mobile/" />
+<meta property="og:image" content="https://yaffalhakim1.github.io/opencode-mobile/screens/chat.png" />
+<meta property="og:image:alt" content="The OpenCode Mobile chat screen showing a streamed answer with tool cards" />
+<meta property="og:site_name" content="OpenCode Mobile" />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="OpenCode Mobile" />
+<meta name="twitter:description" content="A native Android client for your self-hosted OpenCode agent." />
+<meta name="twitter:image" content="https://yaffalhakim1.github.io/opencode-mobile/screens/chat.png" />
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230B0F0C'/%3E%3Cpath d='M7 8h10v8H7z M9.5 10.5l2 1.5-2 1.5 M13.5 13.5h2.5' stroke='%2326E085' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "OpenCode Mobile",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Android 8.0+",
+  "description": "A native Android client for a self-hosted OpenCode server. Stream replies, answer the agent's questions, and review tool calls from your phone.",
+  "url": "https://yaffalhakim1.github.io/opencode-mobile/",
+  "downloadUrl": "https://github.com/yaffalhakim1/opencode-mobile/releases/latest",
+  "softwareVersion": "1.0.6",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "license": "https://github.com/yaffalhakim1/opencode-mobile"
+}
+</script>
+
+<style>
+  :root {
+    --bg: #0B0F0C;
+    --bg-soft: #11170F;
+    --bg-raise: #141A16;
+    --line: #26302A;
+    --line-soft: #1C241F;
+    --fg: #E8EDE9;
+    --fg-dim: #A8B5AC;
+    --fg-faint: #6E7C73;
+    --brand: #26E085;
+    --brand-ink: #04301C;
+
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+
+    --gutter: clamp(1.25rem, 5vw, 2.5rem);
+    --measure: 62ch;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 400 1rem/1.65 var(--sans);
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  a { color: inherit; }
+
+  ::selection { background: var(--brand); color: var(--brand-ink); }
+
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  .skip {
+    position: absolute; left: -9999px; top: 0;
+    background: var(--brand); color: var(--brand-ink);
+    padding: .75rem 1.25rem; border-radius: 0 0 12px 0;
+    font-weight: 600; z-index: 100;
+  }
+  .skip:focus { left: 0; }
+
+  /* ---------- shell ---------- */
+
+  .wrap {
+    width: min(1120px, 100% - var(--gutter) * 2);
+    margin-inline: auto;
+  }
+
+  header.bar {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in oklab, var(--bg) 78%, transparent);
+    backdrop-filter: blur(18px) saturate(160%);
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .bar-inner {
+    display: flex; align-items: center; gap: 1rem;
+    height: 64px;
+  }
+
+  .brand {
+    display: inline-flex; align-items: center; gap: .625rem;
+    font-weight: 600; letter-spacing: -0.01em;
+    text-decoration: none;
+  }
+  .brand svg { display: block; }
+
+  nav.top { margin-left: auto; display: flex; gap: .25rem; }
+  nav.top a {
+    text-decoration: none; color: var(--fg-dim);
+    font-size: .875rem; padding: .5rem .75rem; border-radius: 8px;
+    transition: color 140ms var(--ease-out), background 140ms var(--ease-out);
+  }
+  nav.top a:hover { color: var(--fg); background: var(--bg-raise); }
+
+  /* ---------- hero ---------- */
+
+  .hero {
+    display: grid;
+    grid-template-columns: 1.05fr .95fr;
+    gap: clamp(2rem, 5vw, 4.5rem);
+    align-items: center;
+    padding-block: clamp(3.5rem, 9vw, 7rem) clamp(3rem, 7vw, 5rem);
+  }
+
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: .5rem;
+    font: 500 .75rem/1 var(--mono);
+    letter-spacing: .08em; text-transform: uppercase;
+    color: var(--brand);
+    border: 1px solid color-mix(in oklab, var(--brand) 32%, transparent);
+    border-radius: 999px;
+    padding: .4rem .7rem;
+    margin-bottom: 1.5rem;
+  }
+  .eyebrow .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--brand);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--brand) 70%, transparent);
+    animation: pulse 2.4s var(--ease-in-out) infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--brand) 55%, transparent); }
+    50% { box-shadow: 0 0 0 6px transparent; }
+  }
+
+  h1 {
+    font-size: clamp(2.25rem, 5.2vw, 3.5rem);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    font-weight: 600;
+    margin: 0 0 1.25rem;
+    text-wrap: balance;
+  }
+
+  .lede {
+    font-size: clamp(1.0625rem, 1.6vw, 1.1875rem);
+    line-height: 1.6;
+    color: var(--fg-dim);
+    max-width: 46ch;
+    margin: 0 0 2rem;
+    text-wrap: pretty;
+  }
+
+  .cta-row { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .8rem 1.15rem;
+    border-radius: 12px;
+    font-weight: 600; font-size: .9375rem;
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: transform 140ms var(--ease-out), background 140ms var(--ease-out),
+                border-color 140ms var(--ease-out);
+  }
+  .btn:active { transform: scale(0.975); }
+
+  .btn-primary { background: var(--brand); color: var(--brand-ink); }
+  .btn-primary:hover { background: #3eea94; }
+
+  .btn-ghost {
+    color: var(--fg);
+    border-color: var(--line);
+    background: var(--bg-raise);
+  }
+  .btn-ghost:hover { border-color: #35423A; background: #18201B; }
+
+  .meta {
+    margin-top: 1.5rem;
+    font: 400 .8125rem/1.6 var(--mono);
+    color: var(--fg-faint);
+  }
+  .meta code { color: var(--fg-dim); }
+
+  /* phone */
+
+  .phone-stage { position: relative; justify-self: center; }
+
+  .phone {
+    width: clamp(240px, 26vw, 300px);
+    border-radius: 38px;
+    border: 1px solid var(--line);
+    background: var(--bg-soft);
+    padding: 9px;
+    box-shadow:
+      0 1px 0 0 rgba(255,255,255,.05) inset,
+      0 30px 70px -30px rgba(0,0,0,.9),
+      0 0 0 1px rgba(0,0,0,.4);
+  }
+  .phone img {
+    display: block; width: 100%; height: auto;
+    border-radius: 30px;
+  }
+
+  /* ---------- sections ---------- */
+
+  section { padding-block: clamp(3rem, 7vw, 5.5rem); }
+
+  .rule { height: 1px; background: var(--line-soft); border: 0; margin: 0; }
+
+  h2 {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    font-weight: 600;
+    margin: 0 0 .75rem;
+    text-wrap: balance;
+  }
+
+  .section-lede {
+    color: var(--fg-dim);
+    max-width: var(--measure);
+    margin: 0 0 2.5rem;
+    text-wrap: pretty;
+  }
+
+  /* feature rows: two columns, alternating, not a card grid */
+
+  .feature {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(1.5rem, 4vw, 3.5rem);
+    align-items: center;
+    padding-block: clamp(1.75rem, 4vw, 2.75rem);
+    border-top: 1px solid var(--line-soft);
+  }
+  .feature:nth-child(even) .feature-text { order: 2; }
+
+  .feature h3 {
+    font-size: 1.125rem;
+    letter-spacing: -0.01em;
+    font-weight: 600;
+    margin: 0 0 .5rem;
+  }
+  .feature p {
+    margin: 0;
+    color: var(--fg-dim);
+    max-width: 42ch;
+    text-wrap: pretty;
+  }
+
+  .shot {
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: var(--bg-soft);
+    padding: 8px;
+    justify-self: center;
+    width: min(100%, 300px);
+  }
+  .shot img { display: block; width: 100%; height: auto; border-radius: 14px; }
+
+  /* list of specifics, no cards */
+
+  .specs { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+  .specs li {
+    display: grid;
+    grid-template-columns: 1.5rem 1fr;
+    gap: .875rem;
+    padding-block: .875rem;
+    border-top: 1px solid var(--line-soft);
+    color: var(--fg-dim);
+  }
+  .specs li:first-child { border-top: 0; }
+  .specs strong { color: var(--fg); font-weight: 600; }
+  .specs .tick { color: var(--brand); }
+
+  /* ---------- install ---------- */
+
+  .install {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(1.5rem, 4vw, 3rem);
+    align-items: start;
+  }
+
+  pre {
+    margin: 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1rem 1.125rem;
+    overflow-x: auto;
+    font: 400 .8125rem/1.75 var(--mono);
+    color: var(--fg-dim);
+  }
+  pre .c { color: var(--fg-faint); }
+  pre .p { color: var(--brand); }
+
+  /* ---------- footer ---------- */
+
+  footer {
+    border-top: 1px solid var(--line-soft);
+    padding-block: 2.5rem 3.5rem;
+    color: var(--fg-faint);
+    font-size: .875rem;
+  }
+  footer .wrap {
+    display: flex; flex-wrap: wrap; gap: 1rem 2rem;
+    align-items: center; justify-content: space-between;
+  }
+  footer a { color: var(--fg-dim); text-decoration: none; }
+  footer a:hover { color: var(--fg); }
+  footer nav { display: flex; gap: 1.25rem; }
+
+  /* ---------- motion ---------- */
+
+  [data-reveal] {
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 620ms var(--ease-out), transform 620ms var(--ease-out);
+  }
+  [data-reveal].in {
+    opacity: 1;
+    transform: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+    [data-reveal] { opacity: 1; transform: none; transition: none; }
+    .eyebrow .dot { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+
+  /* ---------- responsive ---------- */
+
+  @media (max-width: 860px) {
+    .hero { grid-template-columns: 1fr; }
+    .phone-stage { order: -1; }
+    .feature { grid-template-columns: 1fr; }
+    .feature:nth-child(even) .feature-text { order: 0; }
+    .install { grid-template-columns: 1fr; }
+    nav.top { display: none; }
+  }
+
+  @media (max-width: 380px) {
+    .cta-row { flex-direction: column; align-items: stretch; }
+    .btn { justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="bar">
+  <div class="wrap bar-inner">
+    <a class="brand" href="/opencode-mobile/" aria-label="OpenCode Mobile home">
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="2" y="3" width="20" height="18" rx="5" fill="none" stroke="#26E085" stroke-width="1.7"/>
+        <path d="M7 9l3 2.5L7 14M12.5 14h4" fill="none" stroke="#26E085" stroke-width="1.7"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      OpenCode Mobile
+    </a>
+    <nav class="top" aria-label="Sections">
+      <a href="#features">Features</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/yaffalhakim1/opencode-mobile">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <div class="wrap hero">
+    <div>
+      <span class="eyebrow"><span class="dot" aria-hidden="true"></span>Native Android · Kotlin</span>
+
+      <h1>Your agent, in your pocket. Not in someone&rsquo;s cloud.</h1>
+
+      <p class="lede">
+        OpenCode Mobile is a native client for the OpenCode server already running on
+        your machine. Watch the reply stream in, answer when the agent asks you
+        something, and approve the files it touches &mdash; from the sofa.
+      </p>
+
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://github.com/yaffalhakim1/opencode-mobile/releases/latest">
+          Download the APK
+        </a>
+        <a class="btn btn-ghost" href="https://github.com/yaffalhakim1/opencode-mobile">
+          Read the source
+        </a>
+      </div>
+
+      <p class="meta">
+        Android 8.0+ · 24&nbsp;MB · signed build<br />
+        <code>adb install -r opencode-mobile.apk</code>
+      </p>
+    </div>
+
+    <div class="phone-stage">
+      <div class="phone">
+        <img src="screens/chat.png" width="1080" height="2400"
+             alt="The chat screen: a streamed answer with reasoning and tool cards above it" />
+      </div>
+    </div>
+  </div>
+
+  <hr class="rule" />
+
+  <section id="features">
+    <div class="wrap">
+      <h2>Built around how an agent actually works</h2>
+      <p class="section-lede">
+        An agent turn is not a chat message. It is reasoning, tool calls and prose,
+        interleaved, sometimes pausing to ask you a question. The interface is
+        shaped around that, not around a messenger.
+      </p>
+
+      <div class="feature" data-reveal>
+        <div class="feature-text">
+          <h3>A turn is one card, not ten</h3>
+          <p>
+            Reasoning and tool calls share a single surface with a hairline between
+            rows, so a run of ten steps stays compact and the prose is what you
+            read. Each row says what happened &mdash; &ldquo;Ran command&rdquo;,
+            &ldquo;Edited file&rdquo; &mdash; with a check mark when it succeeded.
+          </p>
+        </div>
+        <div class="shot">
+          <img src="screens/chat.png" width="1080" height="2400" loading="lazy"
+               alt="Reasoning and tool rows grouped in one card, divided by faint lines" />
+        </div>
+      </div>
+
+      <div class="feature" data-reveal>
+        <div class="feature-text">
+          <h3>It asks, you answer, it continues</h3>
+          <p>
+            When the agent needs a decision it blocks the turn and waits. Questions
+            and permission requests appear as cards with their real choices &mdash;
+            including which pattern &ldquo;Always allow&rdquo; would remember.
+          </p>
+        </div>
+        <div class="shot">
+          <img src="screens/sessions.png" width="1080" height="2400" loading="lazy"
+               alt="The session list, grouped by recency with five sessions per group" />
+        </div>
+      </div>
+
+      <div class="feature" data-reveal>
+        <div class="feature-text">
+          <h3>Long sessions stay navigable</h3>
+          <p>
+            Open at the newest turn, not the first. Scroll up to page back through
+            history. Group by project or by when you last touched it, filter to what
+            is running, and start a new session in a specific project.
+          </p>
+        </div>
+        <div class="shot">
+          <img src="screens/settings.png" width="1080" height="2400" loading="lazy"
+               alt="Settings: the connected server, dark theme toggle and disconnect action" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule" />
+
+  <section>
+    <div class="wrap">
+      <h2>What it deliberately does not do</h2>
+      <p class="section-lede">
+        This is a client for a server you run. It has no account, no sync, and no
+        cloud of its own.
+      </p>
+
+      <ul class="specs">
+        <li><span class="tick" aria-hidden="true">✓</span><span><strong>No account.</strong> Pair by scanning a code or entering the address and password your server already prints.</span></li>
+        <li><span class="tick" aria-hidden="true">✓</span><span><strong>No traffic of its own.</strong> It talks only to the host you gave it &mdash; your LAN address, or a tunnel you control.</span></li>
+        <li><span class="tick" aria-hidden="true">✓</span><span><strong>No plaintext credential.</strong> The server password is sealed with an AES-256-GCM key held in the Android keystore.</span></li>
+        <li><span class="tick" aria-hidden="true">✓</span><span><strong>No model of its own.</strong> The agent, the model and the reasoning effort are the ones your server has.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <hr class="rule" />
+
+  <section id="install">
+    <div class="wrap">
+      <h2>Install</h2>
+      <p class="section-lede">
+        The APK is signed and published on every release. It is not on the Play
+        Store; sideloading is the whole distribution model.
+      </p>
+
+      <div class="install">
+        <div>
+          <pre><code><span class="c"># on your phone, with the APK downloaded</span>
+adb install -r <span class="p">opencode-mobile-v1.0.6.apk</span></code></pre>
+          <p class="meta">
+            If a build is already installed, uninstall it first &mdash; the
+            signature must match.
+          </p>
+        </div>
+
+        <div>
+          <pre><code><span class="c"># on your machine, then scan the QR it prints</span>
+opencode serve --hostname 0.0.0.0 --port 4096
+
+<span class="c"># or point the app at the printed URL and password</span></code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>OpenCode Mobile &mdash; a client, not a service.</span>
+    <nav aria-label="Footer">
+      <a href="https://github.com/yaffalhakim1/opencode-mobile">GitHub</a>
+      <a href="https://github.com/yaffalhakim1/opencode-mobile/releases">Releases</a>
+      <a href="https://github.com/yaffalhakim1/opencode-mobile/blob/master/CHANGELOG.md">Changelog</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+  // Reveal on scroll. Gated on reduced motion, and degrades to visible if
+  // IntersectionObserver is unavailable rather than leaving content hidden.
+  (function () {
+    var nodes = document.querySelectorAll('[data-reveal]');
+    if (!nodes.length) return;
+
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce || !('IntersectionObserver' in window)) {
+      nodes.forEach(function (n) { n.classList.add('in'); });
+      return;
+    }
+
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        e.target.classList.add('in');
+        io.unobserve(e.target);
+      });
+    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.1 });
+
+    nodes.forEach(function (n) { io.observe(n); });
+  })();
+</script>
+
+</body>
+</html>
