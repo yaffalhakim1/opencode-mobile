@@ -39,14 +39,12 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.opencode.mobile.data.chat.ChatEntry
 import dev.opencode.mobile.ui.components.AssistantMessage
 import dev.opencode.mobile.ui.components.ChatComposer
 import dev.opencode.mobile.ui.components.Glyphs
@@ -56,7 +54,6 @@ import dev.opencode.mobile.ui.components.QuestionCard
 import dev.opencode.mobile.ui.components.StateMessage
 import dev.opencode.mobile.ui.components.UserMessage
 import dev.opencode.mobile.ui.theme.extendedColors
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,41 +63,47 @@ fun ChatScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
     var sheetOpen by remember { mutableStateOf(false) }
 
     val filePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments(),
     ) { uris -> uris.forEach(viewModel::attach) }
 
-    // Follow the tail only while the agent is producing output, so a user
-    // scrolling back through history is not yanked forward.
-    LaunchedEffect(state.timeline.entries.size, state.timeline.isRunning) {
-        if (state.timeline.isRunning && state.timeline.entries.isNotEmpty()) {
-            listState.animateScrollToItem(state.timeline.entries.lastIndex)
-        }
+    /*
+     * The list is inverted, the way a chat is: the newest message is the
+     * first item and it sits at the bottom of the screen, with the history
+     * running up from there.
+     *
+     * That is what makes the latest response always visible. The list is
+     * anchored to the bottom, so a reply that grows pushes the history up
+     * rather than the text out of view — no scroll bookkeeping, and nothing
+     * to get out of step with the stream.
+     *
+     * Keyed on the newest row rather than on the number of rows: loading an
+     * older page adds rows without changing the newest one, and the view must
+     * not move when the user scrolls back through history.
+     */
+    val newestKey = state.timeline.rows.lastOrNull()?.key
+    LaunchedEffect(newestKey) {
+        if (newestKey != null) listState.scrollToItem(0)
     }
 
     // An explicit jump (the button, or sending a prompt) always wins.
     LaunchedEffect(state.timeline.scrollRequest) {
         if (state.timeline.entries.isNotEmpty()) {
-            listState.animateScrollToItem(state.timeline.entries.lastIndex)
+            listState.animateScrollToItem(0)
         }
     }
-
-    val atBottom by remember {
-        derivedStateOf {
-            val last = listState.layoutInfo.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf true
-            last.index >= listState.layoutInfo.totalItemsCount - 1
-        }
-    }
-    LaunchedEffect(atBottom) { viewModel.onTailVisibilityChanged(atBottom) }
 
     // Reaching the top pulls the next older page, so a long conversation can be
-    // read back to its start rather than stopping at the newest window.
+    // read back to its start rather than stopping at the newest window. The
+    // oldest end is the highest index, because the list is inverted.
     val atTop by remember {
         derivedStateOf {
-            listState.firstVisibleItemIndex <= 2 && !state.timeline.loadingOlder
+            val visible = listState.layoutInfo.visibleItemsInfo
+            val oldest = visible.lastOrNull() ?: return@derivedStateOf false
+            oldest.index >= listState.layoutInfo.totalItemsCount - 3 &&
+                !state.timeline.loadingOlder
         }
     }
     LaunchedEffect(atTop, state.timeline.olderCursor) {
@@ -192,6 +195,8 @@ fun ChatScreen(
 
                 else -> LazyColumn(
                     state = listState,
+                    // Inverted: the first item is the bottom of the screen.
+                    reverseLayout = true,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
                         start = 16.dp,
@@ -201,24 +206,16 @@ fun ChatScreen(
                     ),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    items(state.timeline.rows, key = { it.key }) { row ->
-                        when (row) {
-                            is ChatRow.User -> UserMessage(row.entry)
-                            is ChatRow.AssistantRun -> AssistantMessage(
-                                entries = row.entries,
-                                onToggleReasoning = { messageID, ordinal ->
-                                    viewModel.toggleReasoning(messageID, ordinal)
-                                },
-                            )
+                    /*
+                     * The data is reversed to match the layout: the first item
+                     * is the bottom of the screen, so the newest message goes
+                     * first and the history runs up from it.
+                     */
 
-                            is ChatRow.Notice -> NoticeMessage(row.entry)
-                        }
-                    }
-
-                    // Questions and permission requests sit at the end: the agent
-                    // is blocked on them, so they belong where the user is
-                    // already looking.
-                    items(state.blocking.permissions, key = { "perm-${it.id}" }) { request ->
+                    // Questions and permission requests sit at the bottom:
+                    // the agent is blocked on them, so they belong where the
+                    // user is already looking.
+                    items(state.blocking.permissions.asReversed(), key = { "perm-${it.id}" }) { request ->
                         PermissionCard(
                             request = request,
                             onDecide = { decision -> viewModel.answerPermission(request, decision) },
@@ -236,11 +233,32 @@ fun ChatScreen(
                             )
                         }
                     }
+
+                    items(state.timeline.rows.asReversed(), key = { it.key }) { row ->
+                        when (row) {
+                            is ChatRow.User -> UserMessage(row.entry)
+                            is ChatRow.AssistantRun -> AssistantMessage(
+                                entries = row.entries,
+                                onToggleReasoning = { messageID, ordinal ->
+                                    viewModel.toggleReasoning(messageID, ordinal)
+                                },
+                            )
+
+                            is ChatRow.Notice -> NoticeMessage(row.entry)
+                        }
+                    }
                 }
             }
 
+            /*
+             * The way back to the newest message. It is always there: the list
+             * is inverted, so this is the one control that says "the latest
+             * response is over here", and hiding it whenever it is not needed
+             * meant it appeared and disappeared with no pattern the reader
+             * could learn.
+             */
             AnimatedVisibility(
-                visible = state.timeline.showJumpToBottom && state.timeline.entries.isNotEmpty(),
+                visible = state.timeline.entries.isNotEmpty(),
                 enter = fadeIn() + scaleIn(initialScale = 0.8f),
                 exit = fadeOut() + scaleOut(targetScale = 0.8f),
                 modifier = Modifier
@@ -248,10 +266,7 @@ fun ChatScreen(
                     .padding(end = 16.dp, bottom = 16.dp),
             ) {
                 SmallFloatingActionButton(
-                    onClick = {
-                        viewModel.jumpToBottom()
-                        scope.launch { listState.animateScrollToItem(state.timeline.entries.lastIndex) }
-                    },
+                    onClick = { viewModel.jumpToBottom() },
                     shape = CircleShape,
                     containerColor = MaterialTheme.colorScheme.surfaceVariant,
                     contentColor = MaterialTheme.colorScheme.onSurface,
