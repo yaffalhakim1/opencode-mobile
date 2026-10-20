@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+import org.gradle.api.GradleException
 import java.util.Properties
 
 // One version for the whole tree. `version.properties` is the only place a
@@ -27,12 +28,36 @@ fun deriveVersionCode(version: String): Int {
     return major * 10000 + minor * 100 + patch
 }
 
-// A side-loaded app still has to be signed to install. The keystore lives in the
-// project because this is a personal build; see keystore.properties.
+// A side-loaded app still has to be signed to install. The key is not in the
+// repo: CI restores it from a repository secret, and a local release build
+// needs an untracked keystore.properties. See RELEASING.md.
 val keystoreProperties = Properties()
 val keystoreFile = rootProject.file("keystore.properties")
 if (keystoreFile.exists()) {
     keystoreFile.inputStream().use { stream -> keystoreProperties.load(stream) }
+}
+
+val storeFilePath = keystoreProperties.getProperty("storeFile")
+val hasSigningMaterial = !keystoreProperties.isEmpty() &&
+    storeFilePath != null &&
+    rootProject.file(storeFilePath).exists()
+
+// An unsigned release APK builds fine and installs on nobody's phone, so the
+// build stops here instead. Debug and test tasks are unaffected: they do not
+// need the key.
+val requestsRelease = gradle.startParameter.taskNames.any { task ->
+    task.contains("release", ignoreCase = true) ||
+        task.endsWith(":assemble", ignoreCase = true) ||
+        task.endsWith(":build", ignoreCase = true) ||
+        task.equals("assemble", ignoreCase = true) ||
+        task.equals("build", ignoreCase = true)
+}
+if (requestsRelease && !hasSigningMaterial) {
+    throw GradleException(
+        "The release build needs keystore.properties and the keystore it points at. " +
+            "CI restores both from repository secrets; a local release build needs a " +
+            "copy of them. See RELEASING.md."
+    )
 }
 
 android {
@@ -40,9 +65,10 @@ android {
     compileSdk = 36
 
     signingConfigs {
-        if (!keystoreProperties.isEmpty) {
-            create("release") {
-                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+        create("release") {
+            val path = storeFilePath
+            if (path != null && hasSigningMaterial) {
+                storeFile = rootProject.file(path)
                 storePassword = keystoreProperties.getProperty("storePassword")
                 keyAlias = keystoreProperties.getProperty("keyAlias")
                 keyPassword = keystoreProperties.getProperty("keyPassword")
@@ -67,7 +93,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            signingConfig = signingConfigs.findByName("release")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

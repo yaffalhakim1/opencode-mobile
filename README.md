@@ -142,11 +142,16 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
-`app-release.apk` is signed with `keystore/opencode-mobile.jks` (credentials in
-`keystore.properties`). The keystore is committed on purpose: this is a personal
-side-load build. If it ever ships publicly, move both files out of the project
-and generate a fresh key. Changing the key later means users must uninstall
-before reinstalling.
+`app-release.apk` is signed with a release key that is **not in this repo**. The
+keystore lives in CI as a repository secret and is restored at build time; a
+local release build needs an untracked `keystore.properties` pointing at a
+keystore of your own. See [RELEASING.md](RELEASING.md) for the setup.
+
+The key is not in the repo on purpose. The signing certificate is embedded in
+every published APK, so a key that sits in a public repository is a key anyone
+can use to sign an update. The key that was committed here was rotated when
+the repository went public, which means **1.0.7 and later cannot be installed
+over an earlier release** — uninstall the old build first.
 
 Test:
 
