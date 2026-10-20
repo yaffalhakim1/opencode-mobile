@@ -102,11 +102,6 @@ class ChatViewModel(
         _state.update { it.copy(composer = it.composer.copy(draft = value)) }
     }
 
-    /** Called by the list when the user scrolls away from the tail. */
-    fun onTailVisibilityChanged(visible: Boolean) {
-        _state.update { it.copy(timeline = it.timeline.copy(showJumpToBottom = !visible)) }
-    }
-
     fun jumpToBottom() {
         _state.update { it.copy(timeline = it.timeline.copy(scrollRequest = it.timeline.scrollRequest + 1)) }
     }

@@ -87,6 +87,33 @@ class ChatRowTest {
     }
 
     @Test
+    fun `the newest row is the last one`() {
+        // The list is displayed inverted, so the rows are reversed for the
+        // screen and the newest one has to be the first item. Getting this
+        // backwards makes the view follow the oldest message instead of the
+        // newest, and every page of history would drag the view with it.
+        val rows = buildChatRows(
+            listOf(
+                user("u1"),
+                assistant("a1", tool("shell")),
+                user("u2"),
+            ),
+        )
+
+        assertEquals("u-u2", rows.last().key)
+        assertEquals("u-u2", rows.asReversed().first().key)
+    }
+
+    @Test
+    fun `loading an older page does not change the newest row`() {
+        // The view follows the newest row, so paging back must not move it.
+        val before = buildChatRows(listOf(user("u1"), assistant("a1", tool("shell"))))
+        val after = buildChatRows(listOf(user("u0"), user("u1"), assistant("a1", tool("shell"))))
+
+        assertEquals(before.last().key, after.last().key)
+    }
+
+    @Test
     fun `keys are unique across row kinds`() {
         val rows = buildChatRows(
             listOf(

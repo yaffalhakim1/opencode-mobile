@@ -21,7 +21,6 @@ data class ChatTimelineState(
     val loadingOlder: Boolean = false,
     /** Bumped when the screen should scroll to the newest entry. */
     val scrollRequest: Long = 0,
-    val showJumpToBottom: Boolean = false,
 ) {
     /**
      * The timeline folded into render rows.
