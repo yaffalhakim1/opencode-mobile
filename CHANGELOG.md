@@ -1,5 +1,37 @@
 # Changelog
 
+## [1.0.10]
+
+### Android
+
+- **Fixed: the session list only changed when you pulled it.** It showed what
+  was true when you opened it, so a turn that finished on your machine still
+  looked like it was running on your phone, and you had to refresh to see
+  otherwise. The list now follows the server: a turn starting or finishing
+  updates as it happens, and a session renamed or created appears without a
+  refresh.
+
+- **Fixed: the stop button disappeared in the middle of a long turn.** The
+  conversation re-read the history as the reply arrived, and when that read
+  landed between two steps it decided the turn had ended. The turn's state now
+  comes from the server's own start and finish signals.
+
+- **Fixed: choosing an agent or model on your computer did not reach the
+  phone.** The app was listening for the wrong name, so the composer kept
+  showing the old choice.
+
+- **Fixed: "cannot reach the server" for a request that would have worked.**
+  A phone moves between networks, and a name that failed to resolve for a
+  second is usually fine on the next try. Reading the session list and the
+  history now retries before showing an error. Sending a message does not
+  retry, because that would run your turn twice.
+
+- **The list tells you when it has stopped following the server**, so a list
+  that has gone quiet is not mistaken for a session that has gone quiet.
+
+- **The button back to the newest message is hidden when you are already
+  there**, and appears when you scroll away.
+
 ## [1.0.9]
 
 ### Android
