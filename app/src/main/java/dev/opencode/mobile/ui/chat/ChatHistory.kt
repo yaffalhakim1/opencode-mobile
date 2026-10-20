@@ -1,5 +1,6 @@
 package dev.opencode.mobile.ui.chat
 
+import dev.opencode.mobile.core.net.Retry
 import dev.opencode.mobile.data.chat.ChatEntry
 import dev.opencode.mobile.data.chat.MessageMapper
 import dev.opencode.mobile.data.chat.TimelineReducer
@@ -61,7 +62,7 @@ class ChatHistory(
      * pages the user scrolled back and loaded are not in it.
      */
     suspend fun refresh(current: ChatTimelineState): ChatTimelineState {
-        val page = api.messagePage(sessionID)
+        val page = Retry.read { api.messagePage(sessionID) }
         val entries = page.messages.mapNotNull(MessageMapper::toEntry).asReversed()
         val merged = TimelineReducer.merge(current.entries, entries)
         return current.copy(
@@ -81,13 +82,17 @@ class ChatHistory(
      * The event feed is live-only: text the client never saw — because the
      * socket was down, or the turn began before it connected — only exists on
      * the server.
+     *
+     * [isRunning] is deliberately left alone. It is the turn's lifecycle, which
+     * the execution events own; deriving it from the projection here meant a
+     * resync that landed between two steps could turn it off, and the Stop
+     * button disappeared in the middle of a long turn.
      */
     suspend fun resync(current: ChatTimelineState): ChatTimelineState {
-        val page = api.messagePage(sessionID)
+        val page = Retry.read { api.messagePage(sessionID) }
         val entries = page.messages.mapNotNull(MessageMapper::toEntry).asReversed()
         return current.copy(
             entries = TimelineReducer.merge(current.entries, entries),
-            isRunning = entries.lastOrNull()?.let { it is ChatEntry.Assistant && it.isStreaming } ?: false,
             isLoading = false,
             olderCursor = TimelineReducer.nextOlderCursor(current.olderCursor, page.olderCursor),
         )

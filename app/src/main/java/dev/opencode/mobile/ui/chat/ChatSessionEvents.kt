@@ -2,6 +2,9 @@ package dev.opencode.mobile.ui.chat
 
 import dev.opencode.mobile.data.remote.EventStream
 import dev.opencode.mobile.data.remote.dto.StreamEventDto
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * The events that change flags rather than the timeline: the turn's lifecycle,
@@ -13,20 +16,29 @@ class ChatSessionEvents(private val events: EventStream) {
     /**
      * Switching agent is echoed back so the composer stays in sync when the
      * change came from another client.
+     *
+     * The event is `session.agent.selected`, and it carries the new agent on
+     * `data.agent`.
      */
-    fun agentSwitched(state: ChatUiState, event: StreamEventDto): ChatEventOutcome {
+    fun agentSelected(state: ChatUiState, event: StreamEventDto): ChatEventOutcome {
         val agent = event.stringField("agent") ?: return ChatEventOutcome(state)
         val selection = state.composer.selection.copy(agentID = agent)
         return ChatEventOutcome(state.copy(composer = state.composer.copy(selection = selection)))
     }
 
-    fun modelSwitched(state: ChatUiState, event: StreamEventDto): ChatEventOutcome {
-        val providerID = event.stringField("providerID")
-        val modelID = event.stringField("modelID")
-        if (providerID == null || modelID == null) return ChatEventOutcome(state)
+    /**
+     * The model event is `session.model.selected` and it nests the model as
+     * `data.model: { id, providerID, variant? }`, not as flat fields.
+     */
+    fun modelSelected(state: ChatUiState, event: StreamEventDto): ChatEventOutcome {
+        val model = (event.data as? JsonObject)?.get("model") as? JsonObject
+            ?: return ChatEventOutcome(state)
+        val providerID = model["providerID"]?.jsonPrimitive?.contentOrNull ?: return ChatEventOutcome(state)
+        val modelID = model["id"]?.jsonPrimitive?.contentOrNull ?: return ChatEventOutcome(state)
+        val variant = model["variant"]?.jsonPrimitive?.contentOrNull
         val selection = state.composer.selection.copy(
             modelKey = "$providerID/$modelID",
-            variant = event.stringField("variant"),
+            variant = variant,
         )
         return ChatEventOutcome(state.copy(composer = state.composer.copy(selection = selection)))
     }
