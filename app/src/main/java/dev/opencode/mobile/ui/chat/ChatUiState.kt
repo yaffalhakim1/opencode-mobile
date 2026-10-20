@@ -1,6 +1,10 @@
 package dev.opencode.mobile.ui.chat
 
+import dev.opencode.mobile.data.chat.AppliedMention
 import dev.opencode.mobile.data.chat.ChatEntry
+import dev.opencode.mobile.data.chat.MentionedFile
+import dev.opencode.mobile.data.chat.MentionedSkill
+import dev.opencode.mobile.data.chat.Mentions
 import dev.opencode.mobile.data.remote.dto.FormDto
 import dev.opencode.mobile.data.remote.dto.PermissionRequestDto
 
@@ -31,6 +35,8 @@ data class ChatTimelineState(
 /** What the user is writing, and who is going to answer it. */
 data class ChatComposerState(
     val draft: String = "",
+    /** Where the caret is, so a mention can be placed where it was typed. */
+    val caret: Int = 0,
     val attachments: List<PendingAttachment> = emptyList(),
     val catalog: ChatCatalog = ChatCatalog(),
     val selection: ChatSelection = ChatSelection(),
@@ -59,6 +65,38 @@ internal fun ChatBlockingState.withoutPermission(id: String): ChatBlockingState 
     copy(permissions = permissions.filterNot { it.id == id })
 
 /**
+ * Puts a chosen mention into the draft and closes the list.
+ *
+ * The spans of the mentions that were already there move with the text,
+ * because they are positions in the prompt the server receives. Without that,
+ * a second mention would leave the first one pointing at the wrong
+ * characters.
+ */
+internal fun ChatUiState.withMention(
+    applied: AppliedMention,
+    file: MentionedFile?,
+    skill: MentionedSkill?,
+): ChatUiState {
+    val delta = applied.text.length - composer.draft.length
+    val files = mention.attachedFiles
+        .map { it.copy(span = Mentions.shiftAfter(it.span, applied.start, delta)) }
+        .let { if (file == null) it else it + file }
+    val skills = mention.attachedSkills
+        .map { it.copy(span = Mentions.shiftAfter(it.span, applied.start, delta)) }
+        .let { if (skill == null) it else it + skill }
+    return copy(
+        composer = composer.copy(draft = applied.text, caret = applied.caret),
+        mention = mention.copy(
+            trigger = null,
+            suggestions = emptyList(),
+            loading = false,
+            attachedFiles = files,
+            attachedSkills = skills,
+        ),
+    )
+}
+
+/**
  * The whole chat screen's state.
  *
  * Split into the conversation, the composer and the things the agent is
@@ -70,6 +108,7 @@ data class ChatUiState(
     val timeline: ChatTimelineState = ChatTimelineState(),
     val composer: ChatComposerState = ChatComposerState(),
     val blocking: ChatBlockingState = ChatBlockingState(),
+    val mention: MentionState = MentionState(),
     val error: String? = null,
     val connectionLost: Boolean = false,
 )
@@ -85,6 +124,7 @@ data class ChatUiState(
 internal fun ChatUiState.restoreAfterFailedSend(
     text: String,
     attachments: List<PendingAttachment>,
+    mentions: MentionState,
     queued: Boolean,
     message: String,
 ): ChatUiState = copy(
@@ -94,6 +134,9 @@ internal fun ChatUiState.restoreAfterFailedSend(
         queued = if (queued) (composer.queued - 1).coerceAtLeast(0) else composer.queued,
     ),
     timeline = timeline.copy(isRunning = queued && timeline.isRunning),
+    // The mentions go back too, but the list stays closed: the trigger was
+    // consumed by the send.
+    mention = mentions.copy(trigger = null, suggestions = emptyList(), loading = false),
     error = message,
 )
 

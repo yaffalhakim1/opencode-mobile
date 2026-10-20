@@ -54,6 +54,8 @@ private sealed interface Route {
         val title: String?,
         val agent: String? = null,
         val modelKey: String? = null,
+        /** The project's directory on the server, for file mentions. */
+        val directory: String? = null,
     ) : Route
     data object Settings : Route
 }
@@ -133,8 +135,8 @@ fun AppRoot(
                             key = "sessions-${active.baseUrl}",
                             factory = sessionsFactory(active),
                         ),
-                        onOpenSession = { id, title, agent, modelKey ->
-                            route = Route.Chat(id, title, agent, modelKey)
+                        onOpenSession = { id, title, agent, modelKey, directory ->
+                            route = Route.Chat(id, title, agent, modelKey, directory)
                         },
                         onOpenSettings = { route = Route.Settings },
                     )
@@ -189,6 +191,7 @@ private val RouteSaver = Saver<Route, String>(
                 route.title.orEmpty(),
                 route.agent.orEmpty(),
                 route.modelKey.orEmpty(),
+            route.directory.orEmpty(),
             ).joinToString("|")
         }
     },
@@ -204,6 +207,7 @@ private val RouteSaver = Saver<Route, String>(
                     title = parts.getOrNull(2)?.takeIf { it.isNotEmpty() },
                     agent = parts.getOrNull(3)?.takeIf { it.isNotEmpty() },
                     modelKey = parts.getOrNull(4)?.takeIf { it.isNotEmpty() },
+                    directory = parts.getOrNull(5)?.takeIf { it.isNotEmpty() },
                 )
             }
             else -> Route.Connect
@@ -232,6 +236,7 @@ private fun chatFactory(
         sessionTitle = route.title,
         sessionAgent = route.agent,
         sessionModelKey = route.modelKey,
+        sessionDirectory = route.directory,
         appContext = appContext,
     )
 }

@@ -152,6 +152,7 @@ fun ChatScreen(
                 }
                 ChatComposer(
                     value = state.composer.draft,
+                    caret = state.composer.caret,
                     onValueChange = viewModel::onDraftChange,
                     onSend = {
                         viewModel.send()
@@ -167,6 +168,8 @@ fun ChatScreen(
                     onDetach = { viewModel.detach(it) },
                     onOpenSelector = { sheetOpen = true },
                     queued = state.composer.queued,
+                    mention = state.mention,
+                    onPickMention = viewModel::mentionPicked,
                 )
             }
         },

@@ -21,6 +21,10 @@
       collapse to a row labelled by the document's own heading
 - [x] Release signing key moved out of the public repo into CI secrets, and the
       exposed key rotated
+- [x] The review findings: paging history, the attachment cap, the chat
+      structure, the form watcher, the theme, session pagination, shared
+      HTTP clients
+- [x] `@` mentions a file in the project and `/` mentions a skill
 - [x] Project scaffold, build, install, verified against the live server
 - [x] Theme rebuilt on the brand green (`#26E085` dark, `#00DA7D` light)
 - [x] Markdown rendering (GFM): headings, emphasis, strikethrough, inline code,

@@ -5,19 +5,28 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.opencode.mobile.core.net.OpenCodeException
+import dev.opencode.mobile.data.chat.AppliedMention
 import dev.opencode.mobile.data.chat.AttachmentPayload
 import dev.opencode.mobile.data.chat.ChatEntry
+import dev.opencode.mobile.data.chat.MentionSpan
+import dev.opencode.mobile.data.chat.MentionTrigger
+import dev.opencode.mobile.data.chat.MentionedFile
+import dev.opencode.mobile.data.chat.MentionedSkill
+import dev.opencode.mobile.data.chat.Mentions
 import dev.opencode.mobile.data.chat.MessageMapper
 import dev.opencode.mobile.data.chat.TimelineReducer
 import dev.opencode.mobile.data.remote.EventStream
 import dev.opencode.mobile.data.remote.OpenCodeApi
 import dev.opencode.mobile.data.remote.StreamSignal
+import dev.opencode.mobile.data.remote.dto.FileEntryDto
 import dev.opencode.mobile.data.remote.dto.FormDto
 import dev.opencode.mobile.data.remote.dto.FormValueDto
 import dev.opencode.mobile.data.remote.dto.PermissionDecision
 import dev.opencode.mobile.data.remote.dto.PermissionRequestDto
 import dev.opencode.mobile.data.remote.dto.PromptFileDto
+import dev.opencode.mobile.data.remote.dto.SkillDto
 import dev.opencode.mobile.data.remote.dto.StreamEventDto
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +35,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+
+/**
+ * How long the file search waits for the user to stop typing.
+ *
+ * Long enough that a path is typed in one go, short enough that the list
+ * keeps up with the typing.
+ */
+private const val MENTION_DEBOUNCE_MS = 220L
 
 /**
  * The chat screen's state holder.
@@ -42,6 +59,8 @@ class ChatViewModel(
     private val sessionTitle: String?,
     private val sessionAgent: String? = null,
     private val sessionModelKey: String? = null,
+    /** The project's directory on the server, so files can be mentioned. */
+    private val sessionDirectory: String? = null,
     appContext: Context? = null,
 ) : ViewModel() {
 
@@ -50,12 +69,16 @@ class ChatViewModel(
     )
     val state: StateFlow<ChatUiState> = _state.asStateFlow()
 
+    /** Debounces the file search; every keystroke would be a round trip. */
+    private var mentionJob: Job? = null
+
     private val handler = ChatEventHandler(events, sessionID)
     private val attachments = ChatAttachmentReader(appContext)
     private val selectionController = ChatSelectionController(sessionID, api, sessionAgent, sessionModelKey)
     private val history = ChatHistory(sessionID, api)
     private val blocking = ChatBlockingWatcher(sessionID, api)
     private val sender = ChatPromptSender(sessionID, api, attachments)
+    private val mentions = ChatMentions(api, sessionDirectory)
     private val stream = ChatStreamConnection(
         events = events,
         scope = viewModelScope,
@@ -96,6 +119,76 @@ class ChatViewModel(
         _state.update {
             val entries = TimelineReducer.toggleReasoning(it.timeline.entries, messageID, ordinal)
             it.copy(timeline = it.timeline.copy(entries = entries))
+        }
+    }
+
+    // ---- mentions ----------------------------------------------------------
+
+    /**
+     * The draft changed, and the caret with it.
+     *
+     * The caret matters: a mention is placed where it was typed, and the
+     * server is told which characters of the prompt it covers.
+     */
+    fun onDraftChange(text: String, caret: Int) {
+        _state.update { it.copy(composer = it.composer.copy(draft = text, caret = caret)) }
+        updateMention(text, caret)
+    }
+
+    /**
+     * Opens or closes the mention list, and fetches what it should show.
+     */
+    private fun updateMention(text: String, caret: Int) {
+        val trigger = Mentions.detect(text, caret)
+        _state.update { it.copy(mention = it.mention.copy(trigger = trigger)) }
+        mentionJob?.cancel()
+        if (trigger == null) {
+            _state.update {
+                it.copy(mention = it.mention.copy(suggestions = emptyList(), loading = false))
+            }
+            return
+        }
+        // Debounced: every keystroke would otherwise be a round trip to the
+        // server, and the answer is the same for most of them.
+        mentionJob = viewModelScope.launch {
+            delay(MENTION_DEBOUNCE_MS)
+            _state.update { it.copy(mention = it.mention.copy(loading = true)) }
+            val suggestions = mentions.suggest(trigger)
+            // The user kept typing while the search was in flight, so the
+            // answer is for a query they have already moved past.
+            if (_state.value.mention.trigger?.query != trigger.query) return@launch
+            _state.update {
+                it.copy(mention = it.mention.copy(suggestions = suggestions, loading = false))
+            }
+        }
+    }
+
+    /** Puts the chosen mention into the prompt. */
+    fun mentionPicked(suggestion: MentionSuggestion) {
+        val current = _state.value
+        val trigger = current.mention.trigger ?: return
+        when (suggestion) {
+            is MentionSuggestion.File -> {
+                val text = "${Mentions.FILE_MARKER}${suggestion.entry.path}"
+                val applied = Mentions.apply(current.composer.draft, trigger, text)
+                val file = MentionedFile(
+                    path = Mentions.absolutePath(sessionDirectory.orEmpty(), suggestion.entry.path),
+                    relativePath = suggestion.entry.path,
+                    span = MentionSpan(applied.start, applied.end, text),
+                )
+                _state.update { it.withMention(applied, file = file, skill = null) }
+            }
+
+            is MentionSuggestion.Skill -> {
+                val text = "${Mentions.SKILL_MARKER}${suggestion.skill.name}"
+                val applied = Mentions.apply(current.composer.draft, trigger, text)
+                val skill = MentionedSkill(
+                    id = suggestion.skill.id,
+                    name = suggestion.skill.name,
+                    span = MentionSpan(applied.start, applied.end, text),
+                )
+                _state.update { it.withMention(applied, file = null, skill = skill) }
+            }
         }
     }
 
@@ -215,7 +308,7 @@ class ChatViewModel(
             // a prompt never quietly goes out without a file that was attached
             // to it.
             val read = sender.readAttachments(current.composer.attachments)
-            val files = when (read) {
+            val picked = when (read) {
                 is AttachmentRead.Ready -> read.files
                 is AttachmentRead.Failed -> {
                     _state.update {
@@ -224,6 +317,9 @@ class ChatViewModel(
                     return@launch
                 }
             }
+            // The files and skills the user mentioned travel with the prompt.
+            val files = picked + current.mention.attachedFiles.map(::mentionedFile)
+            val skills = current.mention.attachedSkills.map(::mentionedSkill)
 
             _state.update {
                 it.copy(
@@ -233,20 +329,22 @@ class ChatViewModel(
                         queued = if (queued) it.composer.queued + 1 else it.composer.queued,
                     ),
                     timeline = it.timeline.copy(isRunning = true),
+                    mention = it.mention.copy(attachedFiles = emptyList(), attachedSkills = emptyList()),
                 )
             }
 
             try {
-                sender.send(text, files, queued)
+                sender.send(text, files, skills, queued)
             } catch (e: OpenCodeException) {
                 _state.update {
-                    it.restoreAfterFailedSend(text, current.composer.attachments, queued, e.message)
+                    it.restoreAfterFailedSend(text, current.composer.attachments, current.mention, queued, e.message)
                 }
             } catch (e: Exception) {
                 _state.update {
                     it.restoreAfterFailedSend(
                         text,
                         current.composer.attachments,
+                        current.mention,
                         queued,
                         e.message ?: "Could not send the prompt.",
                     )
@@ -392,6 +490,7 @@ class ChatViewModel(
         stream.stop()
         history.stop()
         blocking.stop()
+        mentionJob?.cancel()
         super.onCleared()
     }
 }

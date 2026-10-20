@@ -56,7 +56,7 @@ private const val SECTION_PAGE = 5
 @Composable
 fun SessionListScreen(
     viewModel: SessionListViewModel,
-    onOpenSession: (id: String, title: String?, agent: String?, modelKey: String?) -> Unit,
+    onOpenSession: (id: String, title: String?, agent: String?, modelKey: String?, directory: String?) -> Unit,
     onOpenSettings: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -182,6 +182,7 @@ fun SessionListScreen(
                                             session.title,
                                             session.agent,
                                             session.model?.let { "${it.providerID}/${it.id}" },
+                                            session.location?.directory,
                                         )
                                     },
                                     onDelete = { viewModel.deleteSession(session.id) },
@@ -225,6 +226,7 @@ fun SessionListScreen(
                         session.title,
                         session.agent,
                         session.model?.let { "${it.providerID}/${it.id}" },
+                        session.location?.directory,
                     )
                 }
             },

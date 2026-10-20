@@ -1,7 +1,15 @@
 package dev.opencode.mobile.ui.chat
 
+import dev.opencode.mobile.data.chat.AppliedMention
+import dev.opencode.mobile.data.chat.MentionSpan
+import dev.opencode.mobile.data.chat.MentionTrigger
+import dev.opencode.mobile.data.chat.MentionedFile
+import dev.opencode.mobile.data.chat.MentionedSkill
+import dev.opencode.mobile.data.chat.Mentions
 import dev.opencode.mobile.data.remote.OpenCodeApi
 import dev.opencode.mobile.data.remote.dto.PromptFileDto
+import dev.opencode.mobile.data.remote.dto.PromptMentionDto
+import dev.opencode.mobile.data.remote.dto.PromptSkillDto
 
 /**
  * Turns what the user wrote into a request.
@@ -42,11 +50,17 @@ class ChatPromptSender(
      * server holds it and delivers it when the agent is free, which is what
      * you want when you think of something mid-run.
      */
-    suspend fun send(text: String, files: List<PromptFileDto>, queued: Boolean) {
+    suspend fun send(
+        text: String,
+        files: List<PromptFileDto>,
+        skills: List<PromptSkillDto>,
+        queued: Boolean,
+    ) {
         api.sendPrompt(
             sessionID = sessionID,
             text = text,
             files = files,
+            skills = skills,
             delivery = if (queued) "queue" else null,
         )
     }
@@ -57,3 +71,24 @@ sealed interface AttachmentRead {
     data class Ready(val files: List<PromptFileDto>) : AttachmentRead
     data class Failed(val attachment: PendingAttachment, val error: Throwable?) : AttachmentRead
 }
+
+/**
+ * The prompt attachment for a file the user mentioned.
+ *
+ * The file is on the server, so the server reads it itself: the URI points at
+ * the server's own filesystem and nothing is transferred.
+ */
+fun mentionedFile(file: MentionedFile): PromptFileDto = PromptFileDto(
+    uri = Mentions.fileUrl(file.path),
+    name = file.relativePath.substringAfterLast('/'),
+    mention = file.span.toDto(),
+)
+
+/** The prompt attachment for a skill the user mentioned. */
+fun mentionedSkill(skill: MentionedSkill): PromptSkillDto = PromptSkillDto(
+    id = skill.id,
+    mention = skill.span.toDto(),
+)
+
+private fun MentionSpan.toDto(): PromptMentionDto =
+    PromptMentionDto(start = start, end = end, text = text)

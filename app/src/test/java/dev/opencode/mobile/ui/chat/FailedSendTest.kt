@@ -1,5 +1,8 @@
 package dev.opencode.mobile.ui.chat
 
+import dev.opencode.mobile.data.chat.MentionSpan
+import dev.opencode.mobile.data.chat.MentionTrigger
+import dev.opencode.mobile.data.chat.MentionedFile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -25,6 +28,7 @@ class FailedSendTest {
         val restored = state.restoreAfterFailedSend(
             text = "explain the bug",
             attachments = emptyList(),
+            mentions = MentionState(),
             queued = false,
             message = "No connection.",
         )
@@ -41,6 +45,7 @@ class FailedSendTest {
         val restored = state.restoreAfterFailedSend(
             text = "look at this",
             attachments = pending,
+            mentions = MentionState(),
             queued = false,
             message = "No connection.",
         )
@@ -55,6 +60,7 @@ class FailedSendTest {
         val restored = state.restoreAfterFailedSend(
             text = "explain the bug",
             attachments = emptyList(),
+            mentions = MentionState(),
             queued = false,
             message = "No connection.",
         )
@@ -70,6 +76,7 @@ class FailedSendTest {
         val restored = state.restoreAfterFailedSend(
             text = "look at this",
             attachments = listOf(attachment("old.png")),
+            mentions = MentionState(),
             queued = false,
             message = "No connection.",
         )
@@ -84,6 +91,7 @@ class FailedSendTest {
         val restored = state.restoreAfterFailedSend(
             text = "queued prompt",
             attachments = emptyList(),
+            mentions = MentionState(),
             queued = true,
             message = "No connection.",
         )
@@ -98,6 +106,7 @@ class FailedSendTest {
         val restored = state.restoreAfterFailedSend(
             text = "first prompt",
             attachments = emptyList(),
+            mentions = MentionState(),
             queued = false,
             message = "No connection.",
         )
@@ -114,10 +123,57 @@ class FailedSendTest {
         val restored = state.restoreAfterFailedSend(
             text = "queued prompt",
             attachments = emptyList(),
+            mentions = MentionState(),
             queued = true,
             message = "No connection.",
         )
 
         assertTrue(restored.timeline.isRunning)
+    }
+
+    @Test
+    fun `the mentions come back when the send failed`() {
+        // A file the user mentioned is part of the prompt, so losing it would
+        // quietly change what the agent is asked to look at.
+        val mentioned = MentionState(
+            attachedFiles = listOf(
+                MentionedFile(
+                    path = "/home/me/project/src/server.ts",
+                    relativePath = "src/server.ts",
+                    span = MentionSpan(8, 25, "@src/server.ts"),
+                )
+            ),
+        )
+        val state = ChatUiState()
+
+        val restored = state.restoreAfterFailedSend(
+            text = "look at @src/server.ts",
+            attachments = emptyList(),
+            mentions = mentioned,
+            queued = false,
+            message = "No connection.",
+        )
+
+        assertEquals(mentioned.attachedFiles, restored.mention.attachedFiles)
+    }
+
+    @Test
+    fun `the mention list is closed after a failed send`() {
+        // The trigger was consumed by the send, so the list must not reopen.
+        val mentioned = MentionState(
+            trigger = MentionTrigger(marker = '@', query = "src", start = 0, end = 3),
+            attachedSkills = emptyList(),
+        )
+        val state = ChatUiState()
+
+        val restored = state.restoreAfterFailedSend(
+            text = "look at @src",
+            attachments = emptyList(),
+            mentions = mentioned,
+            queued = false,
+            message = "No connection.",
+        )
+
+        assertTrue(restored.mention.isClosed)
     }
 }
