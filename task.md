@@ -1,4 +1,4 @@
-# Task — OpenCode Mobile
+# Task: OpenCode Mobile
 
 ## In progress
 
@@ -21,12 +21,12 @@
 - [x] Theme rebuilt on the brand green (`#26E085` dark, `#00DA7D` light)
 - [x] Markdown rendering (GFM): headings, emphasis, strikethrough, inline code,
       fenced code, nested lists, task boxes, quotes, alerts, tables, rules, links
-- [x] Fixed punctuation loss — apostrophes/parentheses were being dropped
+- [x] Fixed punctuation loss: apostrophes and parentheses were being dropped
 - [x] Fixed reference links swallowing their label
 - [x] Reasoning card shares the tool card surface (`AgentActivityCard`)
 - [x] Composer: agent / model / effort selector sheet
 - [x] Attach files (system picker, inline `data:` URI, 8 MB cap)
-- [x] Scroll-to-bottom button — plain down arrow
+- [x] Scroll-to-bottom button: plain down arrow
 - [x] QR pairing: parses the JSON payload the desktop app actually encodes
 - [x] Prompts queue while the agent is busy (`delivery=queue`)
 - [x] System back walks the route stack
@@ -63,3 +63,4 @@
 
 - Permission approval cards not implemented
 - Session search/pagination (the cursor is parsed but not walked)
+

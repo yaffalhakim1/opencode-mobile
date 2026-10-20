@@ -11,7 +11,7 @@ The release path is [`.github/workflows/release.yml`](.github/workflows/release.
 | `build` | ubuntu-latest | `opencode-mobile-v<version>.apk`, signed, tests run first |
 | `release` | ubuntu-latest | a **draft** GitHub release whose body is the `CHANGELOG.md` section for that version |
 
-There is one platform, so there is no "did this release touch Android?" gate —
+There is one platform, so there is no "did this release touch Android?" gate.
 every release builds the APK.
 
 ## The loop
@@ -26,7 +26,7 @@ Every change follows the same five steps.
 5. Release         dispatch the workflow, check the draft, publish it by hand
 ```
 
-`master`, not `main` — this repo's default branch is `master`.
+This repo's default branch is `master`, not `main`.
 
 A merge into `master` runs **nothing**; tests only run inside the release
 workflow. So step 2 is the only place a change is verified before it ships.
@@ -64,7 +64,7 @@ versionCode = deriveVersionCode(appVersion)           // major*10000 + minor*100
 `1.0.1` → `10001`, `1.0.2` → `10002`. Strictly increasing by one per release,
 which is what an installer compares. Hand-writing `versionCode` is what lets it
 repeat, and an APK whose `versionCode` did not increase is never offered as an
-update — the classic silent-release bug. `deriveVersionCode` throws rather than
+update. That is the classic silent-release bug. `deriveVersionCode` throws rather than
 encode an ambiguous number if a component ever reaches 100.
 
 To bump:
@@ -95,7 +95,7 @@ every entry describes what changed **for them**. The shape, from 1.0.1:
 
 - **Fixed: scanning the pairing code failed with "that is not an OpenCode pairing
   link".** The code on screen is not a link, it is a small block of text holding
-  the code and the address, and the app only accepted the link form — so every
+  the code and the address, and the app only accepted the link form, so every
   scan was rejected even though the code was valid. Both forms now work, and the
   link you can copy from the desktop still works too.
 ```
@@ -110,8 +110,8 @@ The rules that make it readable:
 - **Lead with the symptom, not the change.** Say what was wrong or missing and
   what it cost the reader, *then* what it does now. The symptom is how someone
   recognises their own bug; the fix is how they know it is gone.
-- **A fix reads `**Fixed: <the symptom someone would have hit>.**`** — literally
-  the words they saw or the thing they could not do. A new capability reads
+- **A fix reads `**Fixed: <the symptom someone would have hit>.**`**. Write the
+  words they saw or the thing they could not do. A new capability reads
   `**<what it does now>.**` with no prefix.
 - **Second person, past tense for the bug and present for the behaviour.** "every
   scan was rejected" → "both forms now work".
@@ -142,7 +142,7 @@ gh workflow run release.yml --ref master
 ```
 
 ```sh
-# Or tag the bump commit — the tag must equal v<version>, or the `version` job
+# Or tag the bump commit. The tag must equal v<version>, or the `version` job
 # exits 1 before anything builds.
 git tag -a v1.0.2 -m "OpenCode Mobile v1.0.2"
 git push origin v1.0.2
@@ -181,7 +181,7 @@ Two consequences worth knowing:
   first (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`). The same is true switching
   between the debug and release builds locally.
 - **If this ever ships publicly, rotate first.** Move both files to repository
-  secrets and regenerate, *before* publishing to anyone — after that, rotation
+  secrets and regenerate, *before* publishing to anyone. After that, rotation
   costs every user an uninstall.
 
 Verify a build is signed and by which key:
@@ -221,7 +221,7 @@ rendered code:
 emulator -avd <name> -camera-back "imagefile:/path/to/qr.png"
 ```
 
-The desktop app encodes `{"code":…,"urls":[…]}` — **JSON, not a URL**. Only its
+The desktop app encodes `{"code":…,"urls":[…]}`. That is JSON, not a URL. Only its
 "Copy link" button produces a `/auth/connect/…` URL. Both must parse; a change to
 `PairingLink` should keep a test for each.
 
@@ -275,19 +275,21 @@ Two things make these flows fussier than they look, and both have cost time:
 **form the server holds open**, and whether an agent calls it depends on that
 agent's toolset. The script creates a session, runs a shell prompt, injects a
 form, and passes the generated title to the flow. The flow then opens that
-session by title — the server renames a session after its first turn, so the
+session by title. The server renames a session after its first turn, so the
 original prompt text is not a stable selector.
 
 ## What a real failure looks like
 
-- **`version` job fails on a tag run** — the tag disagrees with
+- **`version` job fails on a tag run**: the tag disagrees with
   `version.properties`. Delete the tag, fix the file, re-tag.
-- **`Extract changelog section` fails** — `CHANGELOG.md` has no
+- **`Extract changelog section` fails**: `CHANGELOG.md` has no
   `## [<version>]` heading for this version. Add it; do not lower the check.
-- **`versionCode in the APK does not match`** — something bypassed
+- **`versionCode in the APK does not match`**: something bypassed
   `deriveVersionCode`. Check `app/build.gradle.kts` before re-running.
-- **Nothing builds on a re-dispatch** — that version is already published.
+- **Nothing builds on a re-dispatch**: that version is already published.
   Bump, then dispatch.
 
 A failed run leaves no release. Re-dispatch after fixing; every step is
 idempotent for a version that has no published release yet.
+
+

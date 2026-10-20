@@ -4,14 +4,14 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
-<title>OpenCode Mobile — a native Android client for your self-hosted agent</title>
+<title>OpenCode Mobile: a native Android client for your self-hosted agent</title>
 <meta name="description" content="OpenCode Mobile is a native Android client for a self-hosted OpenCode server. Stream replies, answer the agent's questions, and review tool calls from your phone. Your machine does the work; nothing leaves your network." />
 <link rel="canonical" href="https://yaffalhakim1.github.io/opencode-mobile/" />
 <meta name="theme-color" content="#0B0F0C" />
 <meta name="color-scheme" content="dark light" />
 
 <meta property="og:type" content="website" />
-<meta property="og:title" content="OpenCode Mobile — a native Android client for your self-hosted agent" />
+<meta property="og:title" content="OpenCode Mobile: a native Android client for your self-hosted agent" />
 <meta property="og:description" content="Stream replies, answer the agent's questions, and review tool calls from your phone. Your machine does the work." />
 <meta property="og:url" content="https://yaffalhakim1.github.io/opencode-mobile/" />
 <meta property="og:image" content="https://yaffalhakim1.github.io/opencode-mobile/screens/chat.png" />
@@ -404,12 +404,12 @@
     <div>
       <span class="eyebrow"><span class="dot" aria-hidden="true"></span>Native Android · Kotlin</span>
 
-      <h1>Your agent, in your pocket. Not in someone&rsquo;s cloud.</h1>
+      <h1>Run your agent from the sofa.</h1>
 
       <p class="lede">
-        OpenCode Mobile is a native client for the OpenCode server already running on
-        your machine. Watch the reply stream in, answer when the agent asks you
-        something, and approve the files it touches &mdash; from the sofa.
+        OpenCode Mobile talks to the OpenCode server on your machine. You watch
+        the reply arrive word by word, answer when it asks you something, and
+        approve the files it edits.
       </p>
 
       <div class="cta-row">
@@ -429,8 +429,11 @@
 
     <div class="phone-stage">
       <div class="phone">
-        <img src="screens/chat.png" width="1080" height="2400"
+        <picture>
+          <source srcset="screens/chat.webp" type="image/webp" />
+          <img src="screens/chat.png" width="1080" height="2400"
              alt="The chat screen: a streamed answer with reasoning and tool cards above it" />
+        </picture>
       </div>
     </div>
   </div>
@@ -439,41 +442,46 @@
 
   <section id="features">
     <div class="wrap">
-      <h2>Built around how an agent actually works</h2>
+      <h2>How it handles a turn</h2>
       <p class="section-lede">
-        An agent turn is not a chat message. It is reasoning, tool calls and prose,
-        interleaved, sometimes pausing to ask you a question. The interface is
-        shaped around that, not around a messenger.
+        An agent turn is reasoning, tool calls and prose, interleaved, sometimes
+        stopping to ask you a question. The interface follows that shape.
       </p>
 
       <div class="feature" data-reveal>
         <div class="feature-text">
-          <h3>A turn is one card, not ten</h3>
+          <h3>Ten steps, one panel</h3>
           <p>
-            Reasoning and tool calls share a single surface with a hairline between
-            rows, so a run of ten steps stays compact and the prose is what you
-            read. Each row says what happened &mdash; &ldquo;Ran command&rdquo;,
-            &ldquo;Edited file&rdquo; &mdash; with a check mark when it succeeded.
+            Reasoning and tool calls share a surface with a hairline between rows.
+            A long run stays compact, so the prose is what you read. Each row says
+            what happened ("Ran command", "Edited file") and marks it with a check
+            when it succeeded.
           </p>
         </div>
         <div class="shot">
+          <picture>
+          <source srcset="screens/chat.webp" type="image/webp" />
           <img src="screens/chat.png" width="1080" height="2400" loading="lazy"
                alt="Reasoning and tool rows grouped in one card, divided by faint lines" />
+        </picture>
         </div>
       </div>
 
       <div class="feature" data-reveal>
         <div class="feature-text">
-          <h3>It asks, you answer, it continues</h3>
+          <h3>It asks, you answer</h3>
           <p>
             When the agent needs a decision it blocks the turn and waits. Questions
-            and permission requests appear as cards with their real choices &mdash;
-            including which pattern &ldquo;Always allow&rdquo; would remember.
+            and permission requests arrive as cards with their real choices,
+            including which pattern "Always allow" would remember.
           </p>
         </div>
         <div class="shot">
+          <picture>
+          <source srcset="screens/sessions.webp" type="image/webp" />
           <img src="screens/sessions.png" width="1080" height="2400" loading="lazy"
                alt="The session list, grouped by recency with five sessions per group" />
+        </picture>
         </div>
       </div>
 
@@ -481,14 +489,17 @@
         <div class="feature-text">
           <h3>Long sessions stay navigable</h3>
           <p>
-            Open at the newest turn, not the first. Scroll up to page back through
-            history. Group by project or by when you last touched it, filter to what
-            is running, and start a new session in a specific project.
+            A session opens at the newest turn. Scroll up to page back through
+            history. Group by project or by when you last touched it, filter to
+            what is running, and start a new session in a chosen project.
           </p>
         </div>
         <div class="shot">
+          <picture>
+          <source srcset="screens/settings.webp" type="image/webp" />
           <img src="screens/settings.png" width="1080" height="2400" loading="lazy"
                alt="Settings: the connected server, dark theme toggle and disconnect action" />
+        </picture>
         </div>
       </div>
     </div>
@@ -498,17 +509,17 @@
 
   <section>
     <div class="wrap">
-      <h2>What it deliberately does not do</h2>
+      <h2>What it leaves out</h2>
       <p class="section-lede">
         This is a client for a server you run. It has no account, no sync, and no
         cloud of its own.
       </p>
 
       <ul class="specs">
-        <li><span class="tick" aria-hidden="true">✓</span><span><strong>No account.</strong> Pair by scanning a code or entering the address and password your server already prints.</span></li>
-        <li><span class="tick" aria-hidden="true">✓</span><span><strong>No traffic of its own.</strong> It talks only to the host you gave it &mdash; your LAN address, or a tunnel you control.</span></li>
+        <li><span class="tick" aria-hidden="true">✓</span><span><strong>No account.</strong> Pair by scanning a code or entering the address and password your server prints.</span></li>
+        <li><span class="tick" aria-hidden="true">✓</span><span><strong>No traffic of its own.</strong> It talks to the host you gave it, on your LAN or through a tunnel you control.</span></li>
         <li><span class="tick" aria-hidden="true">✓</span><span><strong>No plaintext credential.</strong> The server password is sealed with an AES-256-GCM key held in the Android keystore.</span></li>
-        <li><span class="tick" aria-hidden="true">✓</span><span><strong>No model of its own.</strong> The agent, the model and the reasoning effort are the ones your server has.</span></li>
+        <li><span class="tick" aria-hidden="true">✓</span><span><strong>No model of its own.</strong> The agent, model and reasoning effort come from your server.</span></li>
       </ul>
     </div>
   </section>
@@ -519,8 +530,8 @@
     <div class="wrap">
       <h2>Install</h2>
       <p class="section-lede">
-        The APK is signed and published on every release. It is not on the Play
-        Store; sideloading is the whole distribution model.
+        Every release publishes a signed APK. There is no Play Store listing;
+        sideloading is the distribution model.
       </p>
 
       <div class="install">
@@ -528,8 +539,8 @@
           <pre><code><span class="c"># on your phone, with the APK downloaded</span>
 adb install -r <span class="p">opencode-mobile-v1.0.6.apk</span></code></pre>
           <p class="meta">
-            If a build is already installed, uninstall it first &mdash; the
-            signature must match.
+            Uninstall any earlier build first. Android rejects an update signed
+            with a different key.
           </p>
         </div>
 
@@ -547,7 +558,7 @@ opencode serve --hostname 0.0.0.0 --port 4096
 
 <footer>
   <div class="wrap">
-    <span>OpenCode Mobile &mdash; a client, not a service.</span>
+    <span>OpenCode Mobile</span>
     <nav aria-label="Footer">
       <a href="https://github.com/yaffalhakim1/opencode-mobile">GitHub</a>
       <a href="https://github.com/yaffalhakim1/opencode-mobile/releases">Releases</a>
@@ -583,3 +594,6 @@ opencode serve --hostname 0.0.0.0 --port 4096
 
 </body>
 </html>
+
+
+

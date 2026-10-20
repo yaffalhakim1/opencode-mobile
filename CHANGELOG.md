@@ -14,7 +14,7 @@
   step succeeded.
 
 - **The session list is shorter and paged.** Five sessions per group, with
-  "See N more" for the rest, one-line titles, and the folder icon removed — the
+  "See N more" for the rest, one-line titles, and the folder icon removed, since the
   project name already says where a session lives.
 
 - **The header is the app's name.** "Sessions" plus the connected URL became
@@ -33,7 +33,7 @@
 
 - **Fixed: the agent's questions never appeared.** When the agent asked you
   something it waited for an answer, and the phone showed only a tool card stuck
-  on "running" — so the session looked hung with no way forward. The app was
+  on "running", so the session looked hung with no way forward. The app was
   listening for the wrong signal and also discarded the event because the session
   id sits in a different place on it. Questions now render as a card with their
   choices, and answering lets the agent continue.
@@ -49,7 +49,7 @@
 ### Android
 
 - **Fixed: replies appeared only after you pulled to refresh.** Sending a message
-  showed your own text and then nothing — the agent was answering, but the phone
+  showed your own text and then nothing. The agent was answering, but the phone
   stayed silent until you refreshed, so the app looked broken. The live updates
   were arriving and being discarded: the first words of a reply always arrive
   before the message they belong to exists, and the app only knew how to add to a
@@ -66,7 +66,7 @@
 ### Android
 
 - **Fixed: replies appeared only after you pulled to refresh.** Sending a message
-  showed your own text and then nothing — the agent was answering, but the phone
+  showed your own text and then nothing. The agent was answering, but the phone
   stayed silent until you refreshed, so the app looked broken. The live updates
   were arriving and being discarded: the first words of a reply always arrive
   before the message they belong to exists, and the app only knew how to add to a
@@ -84,7 +84,7 @@
   newest message, and scrolling up loads earlier pages until you reach the start.
 
 - **The agent's questions now appear in the app.** When the agent asks you
-  something, it waits for an answer before continuing — and the phone showed
+  something, it waits for an answer before continuing, and the phone showed
   nothing at all, so the session simply looked stuck. Questions now render as a
   card with their choices, and answering one lets the agent carry on.
 
@@ -98,7 +98,7 @@
 
 - **Fixed: scanning the pairing code failed with "that is not an OpenCode pairing
   link".** The code on screen is not a link, it is a small block of text holding
-  the code and the address, and the app only accepted the link form — so every
+  the code and the address, and the app only accepted the link form, so every
   scan was rejected even though the code was valid. Both forms now work, and the
   link you can copy from the desktop still works too.
 
@@ -129,5 +129,6 @@ First release.
 - Group sessions by project or by when they were last used, filter them, and
   search titles and project names.
 - Start a new session in a specific project.
+
 
 

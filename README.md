@@ -60,7 +60,7 @@ ui/settings     Theme and disconnect
 
 One rule shapes the data layer: **the event feed is live-only**. `/api/event` has
 no replay, and a slow consumer is dropped rather than buffered. So the client
-never tries to repair a partial timeline — it applies deltas for the live feel,
+never tries to repair a partial timeline. It applies deltas for the live feel,
 then reconciles by refetching the message history when a turn ends or the stream
 reconnects. `TimelineReducer` is pure, so that reconciliation is the only place
 correctness depends on the server.
@@ -83,7 +83,7 @@ control. Changes are pushed with `POST /api/session/{id}/agent` and
 
 **Attachments.** Files are picked through the system document picker and sent as
 inline `data:` URIs. The prompt endpoint takes a single `uri` per file and
-rejects a server-local path — which is the point, since a phone cannot produce a
+rejects a server-local path, which is the point: a phone cannot produce a
 path on the server's filesystem. Base64 inflates by ~33%, so the picker rejects
 anything over 8 MB before the request is built.
 
@@ -109,8 +109,8 @@ accessible action colour and the raw mark colour.
 `MotionScheme.expressive()` and `ExperimentalMaterial3ExpressiveApi` are all
 `internal` in material3 1.4.0, so the spring motion system is unreachable from
 app code until 1.5.0 ships (which needs compileSdk 37). The visible part of
-Expressive — the emphasized type weights, the corner scale and the tonal palette
-— is applied directly through `MaterialTheme`.
+Expressive (the emphasized type weights, the corner scale and the tonal palette)
+ is applied directly through `MaterialTheme`.
 
 **Deliberate deviation.** The workspace rule asks for a uniform 24dp corner
 radius. This project uses the M3 shape scale (16/20/28dp) instead, because the
@@ -145,7 +145,7 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 `app-release.apk` is signed with `keystore/opencode-mobile.jks` (credentials in
 `keystore.properties`). The keystore is committed on purpose: this is a personal
 side-load build. If it ever ships publicly, move both files out of the project
-and generate a fresh key — changing the key later means users must uninstall
+and generate a fresh key. Changing the key later means users must uninstall
 before reinstalling.
 
 Test:
@@ -178,7 +178,7 @@ Versions are pinned deliberately; several newer AndroidX artifacts declare
 
 The **bundled** barcode model is used, not the Play-Services variant. The
 Play-Services one is ~19 MB smaller but downloads its model on first scan, which
-never completes on a device without the Play Store — the scanner then reports
+never completes on a device without the Play Store. The scanner then reports
 "Waiting for the barcode module to be downloaded" forever. That trade is not
 worth it for a feature that must work on the first try.
 
@@ -221,3 +221,4 @@ Two shapes are worth calling out because they are easy to get wrong:
 - Session search and pagination (the cursor is parsed but not walked)
 - Queued/steered prompts (`delivery: "queue" | "steer"` is unused)
 - Release signing config
+
