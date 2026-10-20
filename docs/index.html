@@ -7,7 +7,7 @@
 <title>OpenCode Mobile: a native Android client for your self-hosted agent</title>
 <meta name="description" content="OpenCode Mobile is a native Android client for a self-hosted OpenCode server. Stream replies, answer the agent's questions, and review tool calls from your phone. Your machine does the work; nothing leaves your network." />
 <link rel="canonical" href="https://yaffalhakim1.github.io/opencode-mobile/" />
-<meta name="theme-color" content="#0B0F0C" />
+<meta name="theme-color" id="theme-color" content="#0B0F0C" />
 <meta name="color-scheme" content="dark light" />
 
 <meta property="og:type" content="website" />
@@ -25,6 +25,30 @@
 
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230B0F0C'/%3E%3Cpath d='M7 8h10v8H7z M9.5 10.5l2 1.5-2 1.5 M13.5 13.5h2.5' stroke='%2326E085' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
 
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400..500&display=swap" />
+
+<script>
+  // Set the theme before the first paint, so a light-mode reader never sees a
+  // dark flash. The choice is remembered; without one, the system decides.
+  (function () {
+    var root = document.documentElement;
+    var theme = 'dark';
+    try {
+      var stored = localStorage.getItem('ocm-theme');
+      if (stored === 'light' || stored === 'dark') {
+        theme = stored;
+      } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+        theme = 'light';
+      }
+    } catch (e) { /* storage blocked: fall through to the system preference */ }
+    root.setAttribute('data-theme', theme);
+    var meta = document.getElementById('theme-color');
+    if (meta) meta.setAttribute('content', theme === 'light' ? '#F7FBF8' : '#0B0F0C');
+  })();
+</script>
+
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -35,7 +59,7 @@
   "description": "A native Android client for a self-hosted OpenCode server. Stream replies, answer the agent's questions, and review tool calls from your phone.",
   "url": "https://yaffalhakim1.github.io/opencode-mobile/",
   "downloadUrl": "https://github.com/yaffalhakim1/opencode-mobile/releases/latest",
-  "softwareVersion": "1.0.6",
+  "softwareVersion": "1.0.8",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
   "license": "https://github.com/yaffalhakim1/opencode-mobile"
 }
@@ -43,26 +67,61 @@
 
 <style>
   :root {
-    --bg: #0B0F0C;
-    --bg-soft: #11170F;
-    --bg-raise: #141A16;
-    --line: #26302A;
-    --line-soft: #1C241F;
-    --fg: #E8EDE9;
-    --fg-dim: #A8B5AC;
-    --fg-faint: #6E7C73;
-    --brand: #26E085;
-    --brand-ink: #04301C;
+    color-scheme: light dark;
+
+    /*
+     * Every colour is the app's own palette, so the site and the app are one
+     * product. Dark is listed first as the fallback for browsers without
+     * light-dark(); the second declaration wins where it is supported, and
+     * color-scheme above decides which side of it is used.
+     */
+    --bg:         #0B0F0C;
+    --bg:         light-dark(#F7FBF8, #0B0F0C);
+    --bg-soft:    #11170F;
+    --bg-soft:    light-dark(#FFFFFF, #11170F);
+    --bg-raise:   #141A16;
+    --bg-raise:   light-dark(#EFF4F0, #141A16);
+    --line:       #2A332D;
+    --line:       light-dark(#C0C9C2, #2A332D);
+    --line-soft:  #1C241F;
+    --line-soft:  light-dark(#DCE5DE, #1C241F);
+    --fg:         #DFE5E0;
+    --fg:         light-dark(#171D19, #DFE5E0);
+    --fg-dim:     #B4C2B8;
+    --fg-dim:     light-dark(#404943, #B4C2B8);
+    --fg-faint:   #83938A;
+    --fg-faint:   light-dark(#5F6A63, #83938A);
+
+    /*
+     * The brand green is a signal colour. On a pale surface it cannot carry
+     * text, so light mode splits it: --brand is the readable action colour
+     * and --brand-mark is the raw green the logo is drawn in.
+     */
+    --brand:      #26E085;
+    --brand:      light-dark(#00794A, #26E085);
+    --brand-mark: #26E085;
+    --brand-mark: light-dark(#00DA7D, #26E085);
+    --brand-ink:  #04301C;
+    --brand-ink:  light-dark(#FFFFFF, #04301C);
+
+    --shadow-card: 0 30px 70px -30px rgba(0,0,0,.9);
+    --shadow-card: light-dark(0 22px 54px -28px rgba(16,32,22,.34), 0 30px 70px -30px rgba(0,0,0,.9));
+    --hairline: 0 1px 0 0 rgba(255,255,255,.05);
+    --hairline: light-dark(0 1px 0 0 rgba(255,255,255,.85), 0 1px 0 0 rgba(255,255,255,.05));
 
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 
-    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
-    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+    --sans: "Geist", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
     --gutter: clamp(1.25rem, 5vw, 2.5rem);
     --measure: 62ch;
   }
+
+  /* An explicit choice overrides the system. */
+  :root[data-theme="light"] { color-scheme: light; }
+  :root[data-theme="dark"] { color-scheme: dark; }
 
   * { box-sizing: border-box; }
 
@@ -76,6 +135,17 @@
     font-optical-sizing: auto;
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
+  }
+
+  /*
+   * A theme change is a change of light, so it is eased rather than cut.
+   * Only the big surfaces move; the small ones change with them.
+   */
+  body, header.bar, .phone, .shot, pre {
+    transition:
+      background-color 300ms var(--ease-out),
+      border-color 300ms var(--ease-out),
+      color 300ms var(--ease-out);
   }
 
   a { color: inherit; }
@@ -117,18 +187,55 @@
 
   .brand {
     display: inline-flex; align-items: center; gap: .625rem;
-    font-weight: 600; letter-spacing: -0.01em;
+    font-weight: 600; letter-spacing: -0.015em;
     text-decoration: none;
   }
-  .brand svg { display: block; }
+  .brand svg { display: block; color: var(--brand-mark); }
 
-  nav.top { margin-left: auto; display: flex; gap: .25rem; }
+  nav.top { margin-left: auto; display: flex; gap: .25rem; align-items: center; }
+
   nav.top a {
     text-decoration: none; color: var(--fg-dim);
     font-size: .875rem; padding: .5rem .75rem; border-radius: 8px;
     transition: color 140ms var(--ease-out), background 140ms var(--ease-out);
   }
   nav.top a:hover { color: var(--fg); background: var(--bg-raise); }
+
+  /*
+   * The theme control. It sits in the header because the header is the one
+   * piece of chrome the reader is most likely to reach for, and it is a
+   * translucent material so it belongs to the same layer as the bar.
+   */
+  .theme-toggle {
+    position: relative;
+    display: grid; place-items: center;
+    width: 34px; height: 34px;
+    margin-left: .25rem;
+    border: 1px solid var(--line-soft);
+    border-radius: 999px;
+    background: var(--bg-raise);
+    color: var(--fg-dim);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      transform 140ms var(--ease-out),
+      background 140ms var(--ease-out),
+      color 140ms var(--ease-out),
+      border-color 140ms var(--ease-out);
+  }
+  .theme-toggle:hover { color: var(--fg); border-color: var(--line); }
+  /* Feedback on the press, not on the release. */
+  .theme-toggle:active { transform: scale(.9); }
+
+  .theme-toggle svg {
+    grid-area: 1 / 1;
+    transition: opacity 240ms var(--ease-out), transform 240ms var(--ease-out);
+  }
+  /* The control shows where it would take you. */
+  .theme-toggle .icon-sun { opacity: 1; transform: none; }
+  .theme-toggle .icon-moon { opacity: 0; transform: scale(.6) rotate(40deg); }
+  :root[data-theme="light"] .theme-toggle .icon-sun { opacity: 0; transform: scale(.6) rotate(-40deg); }
+  :root[data-theme="light"] .theme-toggle .icon-moon { opacity: 1; transform: none; }
 
   /* ---------- hero ---------- */
 
@@ -152,19 +259,19 @@
   }
   .eyebrow .dot {
     width: 6px; height: 6px; border-radius: 50%;
-    background: var(--brand);
-    box-shadow: 0 0 0 0 color-mix(in oklab, var(--brand) 70%, transparent);
+    background: var(--brand-mark);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--brand-mark) 70%, transparent);
     animation: pulse 2.4s var(--ease-in-out) infinite;
   }
   @keyframes pulse {
-    0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--brand) 55%, transparent); }
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--brand-mark) 55%, transparent); }
     50% { box-shadow: 0 0 0 6px transparent; }
   }
 
   h1 {
     font-size: clamp(2.25rem, 5.2vw, 3.5rem);
     line-height: 1.05;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.035em;
     font-weight: 600;
     margin: 0 0 1.25rem;
     text-wrap: balance;
@@ -173,6 +280,7 @@
   .lede {
     font-size: clamp(1.0625rem, 1.6vw, 1.1875rem);
     line-height: 1.6;
+    letter-spacing: -0.008em;
     color: var(--fg-dim);
     max-width: 46ch;
     margin: 0 0 2rem;
@@ -194,18 +302,19 @@
   .btn:active { transform: scale(0.975); }
 
   .btn-primary { background: var(--brand); color: var(--brand-ink); }
-  .btn-primary:hover { background: #3eea94; }
+  .btn-primary:hover { background: color-mix(in oklab, var(--brand) 86%, white); }
 
   .btn-ghost {
     color: var(--fg);
     border-color: var(--line);
     background: var(--bg-raise);
   }
-  .btn-ghost:hover { border-color: #35423A; background: #18201B; }
+  .btn-ghost:hover { border-color: color-mix(in oklab, var(--fg) 16%, var(--line)); }
 
   .meta {
     margin-top: 1.5rem;
     font: 400 .8125rem/1.6 var(--mono);
+    letter-spacing: .01em;
     color: var(--fg-faint);
   }
   .meta code { color: var(--fg-dim); }
@@ -220,10 +329,7 @@
     border: 1px solid var(--line);
     background: var(--bg-soft);
     padding: 9px;
-    box-shadow:
-      0 1px 0 0 rgba(255,255,255,.05) inset,
-      0 30px 70px -30px rgba(0,0,0,.9),
-      0 0 0 1px rgba(0,0,0,.4);
+    box-shadow: var(--shadow-card), var(--hairline);
   }
   .phone img {
     display: block; width: 100%; height: auto;
@@ -239,7 +345,7 @@
   h2 {
     font-size: clamp(1.5rem, 3vw, 2rem);
     line-height: 1.2;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.025em;
     font-weight: 600;
     margin: 0 0 .75rem;
     text-wrap: balance;
@@ -266,7 +372,7 @@
 
   .feature h3 {
     font-size: 1.125rem;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
     font-weight: 600;
     margin: 0 0 .5rem;
   }
@@ -284,6 +390,7 @@
     padding: 8px;
     justify-self: center;
     width: min(100%, 300px);
+    box-shadow: var(--hairline);
   }
   .shot img { display: block; width: 100%; height: auto; border-radius: 14px; }
 
@@ -357,6 +464,18 @@
     [data-reveal] { opacity: 1; transform: none; transition: none; }
     .eyebrow .dot { animation: none; }
     html { scroll-behavior: auto; }
+    /* A theme change still needs to happen, so it fades instead of sliding. */
+    body, header.bar, .phone, .shot, pre { transition: opacity 200ms ease; }
+  }
+
+  /* A material that cannot be translucent is a material that is solid. */
+  @media (prefers-reduced-transparency: reduce) {
+    header.bar { background: var(--bg); backdrop-filter: none; }
+  }
+
+  @media (prefers-contrast: more) {
+    .btn-ghost, .theme-toggle { border-color: var(--fg); }
+    header.bar { background: var(--bg); }
   }
 
   /* ---------- responsive ---------- */
@@ -368,6 +487,8 @@
     .feature:nth-child(even) .feature-text { order: 0; }
     .install { grid-template-columns: 1fr; }
     nav.top { display: none; }
+    /* The theme control outlives the navigation it used to sit inside. */
+    .theme-toggle { margin-left: auto; }
   }
 
   @media (max-width: 380px) {
@@ -384,8 +505,8 @@
   <div class="wrap bar-inner">
     <a class="brand" href="/opencode-mobile/" aria-label="OpenCode Mobile home">
       <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-        <rect x="2" y="3" width="20" height="18" rx="5" fill="none" stroke="#26E085" stroke-width="1.7"/>
-        <path d="M7 9l3 2.5L7 14M12.5 14h4" fill="none" stroke="#26E085" stroke-width="1.7"
+        <rect x="2" y="3" width="20" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="1.7"/>
+        <path d="M7 9l3 2.5L7 14M12.5 14h4" fill="none" stroke="currentColor" stroke-width="1.7"
               stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       OpenCode Mobile
@@ -395,6 +516,17 @@
       <a href="#install">Install</a>
       <a href="https://github.com/yaffalhakim1/opencode-mobile">GitHub</a>
     </nav>
+    <button class="theme-toggle" type="button" id="theme-toggle" aria-label="Switch to light mode">
+      <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none"
+           stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4.1"/>
+        <path d="M12 2.7v2.1M12 19.2v2.1M2.7 12h2.1M19.2 12h2.1M5.5 5.5l1.5 1.5M17 17l1.5 1.5M18.5 5.5L17 7M7 17l-1.5 1.5"/>
+      </svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none"
+           stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M20.2 14.4A8.5 8.5 0 1 1 9.6 3.8a6.7 6.7 0 0 0 10.6 10.6z"/>
+      </svg>
+    </button>
   </div>
 </header>
 
@@ -463,7 +595,7 @@
           <source srcset="screens/chat.webp" type="image/webp" />
           <img src="screens/chat.png" width="1080" height="2400" loading="lazy"
                alt="Reasoning and tool rows grouped in one card, divided by faint lines" />
-        </picture>
+          </picture>
         </div>
       </div>
 
@@ -481,7 +613,7 @@
           <source srcset="screens/sessions.webp" type="image/webp" />
           <img src="screens/sessions.png" width="1080" height="2400" loading="lazy"
                alt="The session list, grouped by recency with five sessions per group" />
-        </picture>
+          </picture>
         </div>
       </div>
 
@@ -498,8 +630,8 @@
           <picture>
           <source srcset="screens/settings.webp" type="image/webp" />
           <img src="screens/settings.png" width="1080" height="2400" loading="lazy"
-               alt="Settings: the connected server, dark theme toggle and disconnect action" />
-        </picture>
+               alt="Settings: the connected server, the theme choice and disconnect action" />
+          </picture>
         </div>
       </div>
     </div>
@@ -537,7 +669,7 @@
       <div class="install">
         <div>
           <pre><code><span class="c"># on your phone, with the APK downloaded</span>
-adb install -r <span class="p">opencode-mobile-v1.0.6.apk</span></code></pre>
+adb install -r <span class="p">opencode-mobile-v1.0.8.apk</span></code></pre>
           <p class="meta">
             Uninstall any earlier build first. Android rejects an update signed
             with a different key.
@@ -568,6 +700,28 @@ opencode serve --hostname 0.0.0.0 --port 4096
 </footer>
 
 <script>
+  // The theme control. The page has already been themed by the script in the
+  // head, so this only has to flip it and remember the choice.
+  (function () {
+    var toggle = document.getElementById('theme-toggle');
+    if (!toggle) return;
+
+    var meta = document.getElementById('theme-color');
+
+    function label(theme) {
+      toggle.setAttribute('aria-label', theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode');
+    }
+    label(document.documentElement.getAttribute('data-theme') || 'dark');
+
+    toggle.addEventListener('click', function () {
+      var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', next);
+      label(next);
+      if (meta) meta.setAttribute('content', next === 'light' ? '#F7FBF8' : '#0B0F0C');
+      try { localStorage.setItem('ocm-theme', next); } catch (e) { /* storage blocked */ }
+    });
+  })();
+
   // Reveal on scroll. Gated on reduced motion, and degrades to visible if
   // IntersectionObserver is unavailable rather than leaving content hidden.
   (function () {
@@ -594,6 +748,3 @@ opencode serve --hostname 0.0.0.0 --port 4096
 
 </body>
 </html>
-
-
-
