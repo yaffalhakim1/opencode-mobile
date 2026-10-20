@@ -1,5 +1,42 @@
 # Changelog
 
+## [1.0.8]
+
+### Android
+
+- **Fixed: scrolling back through a long conversation lost the history you had
+  loaded.** Every time a reply arrived, the conversation was replaced with the
+  newest part of it, so the messages you had scrolled up to read were gone
+  again. The history you have loaded now stays where it is.
+
+- **Fixed: a file the phone could not read was left out of the prompt without
+  saying so.** The message went out without the attachment, and the attachment
+  stayed in the composer looking as though it had been sent. It now stops and
+  tells you which file was the problem, and a failed send puts your text and
+  your files back.
+
+- **Fixed: a question the agent asked could go missing.** The agent waits for
+  an answer, so if the question did not arrive the session looked frozen with
+  no way to continue. The app keeps checking for as long as the agent is
+  working.
+
+- **You can now name a file or a skill in the prompt.** Type `@` to search the
+  project for a file and `/` to list the skills the server has. Picking one
+  puts it in your message and attaches it, and a file is read on the server
+  rather than copied across.
+
+- **The tool catalogs the server sends are readable now.** They used to arrive
+  as a wall of tiny centred text with the markup still showing. They collapse
+  to a single row you can open, and expand into properly formatted text.
+
+- **The session list goes past fifty.** The server hands out a page at a time
+  and the app was only asking for the first one, so older sessions could not
+  be reached. There is now a way to load the rest.
+
+- **The theme choice sticks.** Choosing dark or light was forgotten when the
+  app was closed. It is remembered now, and there is a way back to following
+  the phone's setting.
+
 ## [1.0.7]
 
 ### Android
