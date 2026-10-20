@@ -9,6 +9,14 @@ class OpenCodeException(
 
     val isUnauthorized: Boolean get() = status == 401
 
+    /**
+     * True when the failure might not be true a moment later.
+     *
+     * A transport failure has no status. A server that answered with a status
+     * will answer the same way again, so only the transport is worth retrying.
+     */
+    val isTransient: Boolean get() = status == null
+
     companion object {
         fun network(cause: Throwable): OpenCodeException {
             val detail = cause.message?.takeIf { it.isNotBlank() } ?: cause::class.simpleName.orEmpty()

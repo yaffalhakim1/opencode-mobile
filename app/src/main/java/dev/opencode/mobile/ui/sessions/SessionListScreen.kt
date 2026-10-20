@@ -1,5 +1,6 @@
 package dev.opencode.mobile.ui.sessions
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -117,6 +118,12 @@ fun SessionListScreen(
                 onGrouping = viewModel::setGrouping,
                 onFilter = viewModel::setFilter,
             )
+
+            // The list follows the server, so say when it has stopped. Without
+            // this a stale list looks exactly like a quiet one.
+            AnimatedVisibility(visible = state.connectionLost) {
+                LiveUpdatesPausedBanner(onRetry = { viewModel.load() })
+            }
 
             PullToRefreshBox(
                 isRefreshing = state.isRefreshing,

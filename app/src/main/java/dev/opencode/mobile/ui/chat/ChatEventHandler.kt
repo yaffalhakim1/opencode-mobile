@@ -69,8 +69,8 @@ class ChatEventHandler(
             "session.tool.success" -> timeline.toolSucceeded(state, event)
             "session.tool.failed" -> timeline.toolFailed(state, event)
 
-            "session.agent.switched" -> session.agentSwitched(state, event)
-            "session.model.switched" -> session.modelSwitched(state, event)
+            "session.agent.selected" -> session.agentSelected(state, event)
+            "session.model.selected" -> session.modelSelected(state, event)
             "session.execution.started" -> session.executionStarted(state)
             "session.execution.succeeded",
             "session.execution.failed",

@@ -3,9 +3,13 @@ package dev.opencode.mobile.ui.sessions
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.opencode.mobile.core.net.OpenCodeException
+import dev.opencode.mobile.core.net.Retry
+import dev.opencode.mobile.data.remote.EventStream
 import dev.opencode.mobile.data.remote.OpenCodeApi
 import dev.opencode.mobile.data.remote.dto.ProjectDto
 import dev.opencode.mobile.data.remote.dto.SessionDto
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,6 +34,8 @@ data class SessionsUiState(
     val olderCursor: String? = null,
     /** True while the next older page is being fetched. */
     val loadingMore: Boolean = false,
+    /** The event feed dropped, so what is shown may be behind. */
+    val connectionLost: Boolean = false,
 ) {
     val isEmpty: Boolean get() = !isLoading && sessions.isEmpty() && error == null
 
@@ -39,13 +45,59 @@ data class SessionsUiState(
 }
 class SessionListViewModel(
     private val api: OpenCodeApi,
+    private val events: EventStream,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SessionsUiState())
     val state: StateFlow<SessionsUiState> = _state.asStateFlow()
 
+    /** Debounces a reload asked for by the live feed. */
+    private var reloadJob: Job? = null
+
+    private val feed = SessionListLiveFeed(
+        events = events,
+        scope = viewModelScope,
+        onTurnChanged = ::onTurnChanged,
+        onSessionChanged = ::scheduleReload,
+        onConnectionChanged = { connected ->
+            _state.update { it.copy(connectionLost = !connected) }
+        },
+        onReconnect = ::load,
+    )
+
     init {
         load(initial = true)
+        feed.start()
+    }
+
+    /**
+     * A turn started or finished.
+     *
+     * The running set is patched in place rather than re-fetched: the event
+     * says exactly what changed, and the list is what the user is watching.
+     * A finished turn also changes the session's timestamp, which moves it in
+     * the "Updated" grouping, so the list is re-read once the turn settles.
+     */
+    private fun onTurnChanged(sessionID: String, running: Boolean) {
+        _state.update { current ->
+            val next = if (running) current.running + sessionID else current.running - sessionID
+            current.copy(running = next)
+        }
+        if (!running) scheduleReload()
+    }
+
+    /**
+     * Reloads the list, coalescing a burst into one request.
+     *
+     * Creating a session emits several events in a row, and each one would
+     * otherwise be a round trip for the same answer.
+     */
+    private fun scheduleReload() {
+        if (reloadJob?.isActive == true) return
+        reloadJob = viewModelScope.launch {
+            delay(RELOAD_DEBOUNCE_MS)
+            load()
+        }
     }
 
     fun load(initial: Boolean = false) {
@@ -58,7 +110,10 @@ class SessionListViewModel(
         }
         viewModelScope.launch {
             try {
-                val page = api.sessionPage()
+                // A phone changes networks, and a name that did not resolve a
+                // moment ago usually resolves now. Retrying a read is free;
+                // showing an error the user has to clear by hand is not.
+                val page = Retry.read { api.sessionPage() }
                 _state.update {
                     it.copy(
                         sessions = page.sessions,
@@ -118,12 +173,21 @@ class SessionListViewModel(
      * `/api/session/active` answers with a map of the sessions this process is
      * currently draining, which is the only reliable "is it running" signal — a
      * session's own timestamps cannot distinguish idle from mid-turn.
+     *
+     * The live feed keeps this current once it is connected; this is the
+     * starting point, and the reconciliation after a reconnect.
      */
     private fun refreshRunning() {
         viewModelScope.launch {
             runCatching { api.activeSessions() }
                 .onSuccess { ids -> _state.update { it.copy(running = ids) } }
         }
+    }
+
+    override fun onCleared() {
+        feed.stop()
+        reloadJob?.cancel()
+        super.onCleared()
     }
 
     fun setGrouping(grouping: SessionGrouping) {
@@ -183,4 +247,11 @@ class SessionListViewModel(
         }
     }
 
+    private companion object {
+        /**
+         * Long enough to fold the burst of events a single action emits into
+         * one reload, short enough that the list still feels live.
+         */
+        const val RELOAD_DEBOUNCE_MS = 350L
+    }
 }

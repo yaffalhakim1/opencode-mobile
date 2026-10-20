@@ -95,6 +95,15 @@ fun ChatScreen(
         }
     }
 
+    /*
+     * Whether the newest message is on screen. The list is inverted, so index
+     * 0 is the bottom of the screen and this is exact — there is no guessing
+     * from offsets or total counts.
+     */
+    val atNewest by remember {
+        derivedStateOf { listState.firstVisibleItemIndex == 0 }
+    }
+
     // Reaching the top pulls the next older page, so a long conversation can be
     // read back to its start rather than stopping at the newest window. The
     // oldest end is the highest index, because the list is inverted.
@@ -251,14 +260,13 @@ fun ChatScreen(
             }
 
             /*
-             * The way back to the newest message. It is always there: the list
-             * is inverted, so this is the one control that says "the latest
-             * response is over here", and hiding it whenever it is not needed
-             * meant it appeared and disappeared with no pattern the reader
-             * could learn.
+             * The way back to the newest message. It is shown while the view is
+             * away from the bottom, and hidden when the newest message is
+             * already on screen — an inverted list makes that a plain check on
+             * the first visible index, so it does not flicker.
              */
             AnimatedVisibility(
-                visible = state.timeline.entries.isNotEmpty(),
+                visible = !atNewest && state.timeline.entries.isNotEmpty(),
                 enter = fadeIn() + scaleIn(initialScale = 0.8f),
                 exit = fadeOut() + scaleOut(targetScale = 0.8f),
                 modifier = Modifier

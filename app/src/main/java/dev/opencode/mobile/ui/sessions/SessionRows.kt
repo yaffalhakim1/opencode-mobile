@@ -54,6 +54,37 @@ internal fun LoadMoreRow(loading: Boolean, onClick: () -> Unit) {
 }
 
 /** Shows how many rows a section hides behind "See more". */
+/**
+ * Shown when the event feed is down, so a stale list is not mistaken for a
+ * quiet one.
+ */
+@Composable
+internal fun LiveUpdatesPausedBanner(onRetry: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.secondaryContainer)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = "Live updates paused",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.weight(1f),
+        )
+        IconButton(onClick = onRetry) {
+            Icon(
+                imageVector = Glyphs.Refresh,
+                contentDescription = "Reload the list",
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+        }
+    }
+}
+
 @Composable
 internal fun SeeMoreRow(hidden: Int, onClick: () -> Unit) {
     Row(

@@ -220,8 +220,10 @@ private fun connectFactory(store: ConnectionStore) = viewModelFactory {
 }
 
 private fun sessionsFactory(connection: ServerConnection) = viewModelFactory {
-    val client = HttpClientFactory.create(connection)
-    SessionListViewModel(OpenCodeApi(connection, client))
+    SessionListViewModel(
+        api = OpenCodeApi(connection, HttpClientFactory.create(connection)),
+        events = EventStream(connection),
+    )
 }
 
 private fun chatFactory(
