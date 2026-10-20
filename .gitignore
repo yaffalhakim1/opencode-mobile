@@ -19,7 +19,11 @@ Thumbs.db
 
 # Signing
 #
-# keystore/ and keystore.properties ARE committed on purpose: this is a personal
-# side-load build, and CI needs them to produce an installable APK. If this ever
-# becomes a public app, remove both from git history and use repository secrets
-# instead — see the note in README.md.
+# The release key is NOT in this repo. It lives in CI as a repository secret
+# and is restored at build time; see RELEASING.md.
+#
+# The signing certificate is embedded in every published APK, so a key that sits
+# in a public repo is a key anyone can use to sign an update. The key that was
+# committed here was rotated when the repo went public.
+keystore/
+keystore.properties

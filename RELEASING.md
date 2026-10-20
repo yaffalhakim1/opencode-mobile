@@ -170,19 +170,47 @@ Before publishing, check:
 
 ## Signing
 
-The APK is signed with `keystore/opencode-mobile.jks`, configured by
-`keystore.properties`, both committed to this repo. That is deliberate: this is a
-personal side-load build and CI needs them to produce an installable artifact.
+The APK is signed with a release key that is **not in this repo**. The keystore
+lives in CI as a repository secret and is restored by the `build` job before
+Gradle runs.
+
+The reason is that the signing certificate is embedded in every published APK.
+A key that sits in a public repository is a key anyone can use to sign an
+update that Android would accept over the installed app. This repository was
+private when it was written and public when it was published, so the key that
+was committed here was **rotated** and moved into secrets.
+
+The signing secrets are:
+
+| Secret | What it holds |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | The `.jks`, base64-encoded |
+| `ANDROID_KEY_ALIAS` | The key alias |
+| `ANDROID_KEY_PASSWORD` | The store and key password |
 
 Two consequences worth knowing:
 
-- **Changing the key forces a reinstall.** Android refuses to update an installed
-  app whose signature differs, so rotating the key means every user uninstalls
-  first (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`). The same is true switching
-  between the debug and release builds locally.
-- **If this ever ships publicly, rotate first.** Move both files to repository
-  secrets and regenerate, *before* publishing to anyone. After that, rotation
-  costs every user an uninstall.
+- **The key was rotated, so the last rotation costs every user an uninstall.**
+  Android refuses to update an installed app whose signature differs, so
+  `1.0.7` cannot be installed over `1.0.6` or earlier
+  (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`). Uninstall the old build first. The
+  same is true switching between the debug and release builds locally.
+- **Rotating again costs the same.** Generate a new keystore, replace the three
+  secrets, and every user uninstalls again. Plan a rotation for an event worth
+  the reinstall, not for a routine release.
+
+A local release build needs the same two files, untracked:
+
+```sh
+# keystore.properties, next to the .jks it points at
+storeFile=keystore/opencode-mobile.jks
+storePassword=<the password>
+keyAlias=opencode
+keyPassword=<the password>
+```
+
+Without them the release build **fails** rather than producing an unsigned APK
+that nobody can install. Debug and test tasks do not need the key.
 
 Verify a build is signed and by which key:
 
@@ -190,6 +218,19 @@ Verify a build is signed and by which key:
 "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs \
   app/build/outputs/apk/release/app-release.apk
 ```
+
+### Which key
+
+| Key | SHA-256 of the signing certificate | Status |
+| --- | --- | --- |
+| `F4:B2:4B:7A:29:BF:56:8E:D4:7B:54:C8:1C:BA:C7:14:60:83:F5:14:AF:BA:76:39:59:4F:E7:B1:95:41:B9:32` | RSA-4096, valid to 2056 | **Current.** Signs 1.0.7 and later. |
+| `B0:8A:C4:02:C8:A1:5A:BF:78:67:56:72:ED:1B:4D:72:0F:CF:06:DA:7D:E9:85:3D:EF:8D:FC:6F:92:3D:2D:94` | RSA-4096, valid to 2054 | **Retired.** Signed 1.0.1 to 1.0.6. It was in the repository when the repository went public, so it is burned. |
+
+The retired certificate is still embedded in every APK published up to 1.0.6,
+and it stays in the repository's history. Purging the history would not help:
+the certificate is in the binaries too, and the certificate is all that is
+needed to sign an update. The only real mitigation was to rotate, which is
+what happened before 1.0.7 was published.
 
 ## Testing the build before a release
 

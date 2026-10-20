@@ -17,6 +17,10 @@
 
 ## Done
 
+- [x] Injected system messages (tool catalogs, rule sets) render as markdown and
+      collapse to a row labelled by the document's own heading
+- [x] Release signing key moved out of the public repo into CI secrets, and the
+      exposed key rotated
 - [x] Project scaffold, build, install, verified against the live server
 - [x] Theme rebuilt on the brand green (`#26E085` dark, `#00DA7D` light)
 - [x] Markdown rendering (GFM): headings, emphasis, strikethrough, inline code,
