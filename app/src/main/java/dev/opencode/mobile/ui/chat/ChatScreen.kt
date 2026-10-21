@@ -53,6 +53,7 @@ import dev.opencode.mobile.ui.components.PermissionCard
 import dev.opencode.mobile.ui.components.QuestionCard
 import dev.opencode.mobile.ui.components.StateMessage
 import dev.opencode.mobile.ui.components.UserMessage
+import dev.opencode.mobile.ui.components.isQuestionCard
 import dev.opencode.mobile.ui.theme.extendedColors
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -232,17 +233,20 @@ fun ChatScreen(
                         )
                     }
 
-                    // One question card at a time: a card per pending form made a
-                    // run of questions fill the screen. The next one appears once
-                    // the current one is answered.
-                    state.blocking.forms.firstOrNull()?.let { form ->
-                        item(key = "form-${form.id}") {
-                            QuestionCard(
-                                form = form,
-                                onAnswer = { answer -> viewModel.answerForm(form, answer) },
-                            )
+                    // A form the agent raised that is *not* a question card
+                    // already in the timeline. A `question` tool now renders
+                    // from its own tool call, so drawing its form here as well
+                    // would put two copies of the same question on screen.
+                    state.blocking.forms
+                        .firstOrNull { !it.isQuestionCard() }
+                        ?.let { form ->
+                            item(key = "form-${form.id}") {
+                                QuestionCard(
+                                    form = form,
+                                    onAnswer = { answer -> viewModel.answerForm(form, answer) },
+                                )
+                            }
                         }
-                    }
 
                     // The prompts the server has accepted and not delivered
                     // yet. They sit at the bottom, where the user is looking,
@@ -263,6 +267,12 @@ fun ChatScreen(
                                 onToggleReasoning = { messageID, ordinal ->
                                     viewModel.toggleReasoning(messageID, ordinal)
                                 },
+                                // A question drawn from the tool call is answered
+                                // through whichever form is pending for it.
+                                questionAnswer = ChatQuestionAnswering(
+                                    forms = { state.blocking.forms },
+                                    submit = viewModel::answerForm,
+                                ),
                             )
 
                             is ChatRow.Notice -> NoticeMessage(row.entry)
