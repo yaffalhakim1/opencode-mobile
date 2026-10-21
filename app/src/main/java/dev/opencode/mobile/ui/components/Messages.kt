@@ -26,8 +26,11 @@ import androidx.compose.ui.unit.dp
 import dev.opencode.mobile.data.chat.AssistantBlock
 import dev.opencode.mobile.data.chat.ChatEntry
 import dev.opencode.mobile.data.chat.NoticeKind
+import dev.opencode.mobile.data.remote.dto.FormDto
 import dev.opencode.mobile.ui.markdown.MarkdownText
 import dev.opencode.mobile.ui.theme.extendedColors
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 
 /**
  * A user turn. Right-aligned and tonally filled so the conversation's authorship
@@ -76,6 +79,8 @@ fun AssistantMessage(
     entries: List<ChatEntry.Assistant>,
     onToggleReasoning: (messageID: String, ordinal: Int) -> Unit,
     modifier: Modifier = Modifier,
+    /** Whether a question from this turn can still be answered, and how. */
+    questionAnswer: QuestionAnswering? = null,
 ) {
     // One card for the whole run: rows carry the dividers.
     val rows = remember(entries) { entries.flatMap { it.blocks } }
@@ -100,6 +105,15 @@ fun AssistantMessage(
                     blocks = group.blocks,
                     onToggleReasoning = onToggleReasoning,
                 )
+                is BlockGroup.Question -> {
+                    val prompt = group.block.question ?: return@forEach
+                    QuestionPromptCard(
+                        tool = group.block,
+                        prompt = prompt,
+                        answerable = questionAnswer?.canAnswer(group.block) == true,
+                        onAnswer = { answer -> questionAnswer?.answer(group.block, answer) },
+                    )
+                }
             }
         }
 
@@ -136,18 +150,53 @@ private fun ErrorRow(message: String) {
     }
 }
 
-/** One renderable run: prose, or a card of activity rows. */
+/**
+ * How a question drawn from a tool call is answered.
+ *
+ * The card renders from the tool arguments, but the server only accepts an
+ * answer through a form. This is the join between the two: it decides whether a
+ * form is pending for this question and submits the choice to it.
+ */
+interface QuestionAnswering {
+    /** Whether this question still has a pending form to answer. */
+    fun canAnswer(tool: AssistantBlock.Tool): Boolean
+
+    /** Submits the chosen option labels. */
+    fun answer(tool: AssistantBlock.Tool, labels: List<String>)
+}
+
+/**
+ * Whether this pending form is already on screen as a question card.
+ *
+ * A `question` tool draws itself from its own arguments, and its form is the
+ * thing that accepts the answer. The form is deliberately *not* drawn as a
+ * second card: that would show the same question twice, once read-only and once
+ * as a form, which is how a user ends up answering the copy that does not
+ * matter.
+ *
+ * A form the agent raised for anything else — a permission prompt, an
+ * interactive auth challenge — has no tool call behind it and still needs the
+ * generic card.
+ */
+internal fun FormDto.isQuestionCard(): Boolean =
+    metadata?.get("tool")?.let { it is JsonPrimitive && it.contentOrNull == "question" } == true
+
+/** One renderable run: prose, a card of activity rows, or a question. */
 private sealed interface BlockGroup {
     data class Text(val block: AssistantBlock.Text) : BlockGroup
     data class Activity(val blocks: List<AssistantBlock>) : BlockGroup
+
+    /** A question gets its own card, out of the activity stack. */
+    data class Question(val block: AssistantBlock.Tool) : BlockGroup
 }
 
 /**
  * Folds the block list into prose and activity runs.
  *
- * A `question` or `permission` block breaks the run: those are interactive and
- * get their own card, so folding them into an activity stack would bury the
- * thing that needs an answer.
+ * A `question` block breaks the run: it is interactive and gets its own card, so
+ * folding it into an activity stack would bury the thing that needs an answer.
+ * That is what made a question render as a collapsed tool row whose body was the
+ * raw arguments.
  */
 private fun groupBlocks(blocks: List<AssistantBlock>): List<BlockGroup> {
     val groups = mutableListOf<BlockGroup>()
@@ -166,7 +215,15 @@ private fun groupBlocks(blocks: List<AssistantBlock>): List<BlockGroup> {
                 flush()
                 groups += BlockGroup.Text(block)
             }
-            is AssistantBlock.Reasoning, is AssistantBlock.Tool -> activity += block
+
+            is AssistantBlock.Tool -> if (block.question != null) {
+                flush()
+                groups += BlockGroup.Question(block)
+            } else {
+                activity += block
+            }
+
+            is AssistantBlock.Reasoning -> activity += block
         }
     }
     flush()

@@ -53,6 +53,14 @@ sealed interface AssistantBlock {
         val input: String? = null,
         val output: String? = null,
         val error: String? = null,
+        /**
+         * The arguments, kept structured when they are a question.
+         *
+         * `input` is flattened for display, which loses the options and the
+         * header. A question has to be answered, not read as JSON, so it keeps
+         * its own form.
+         */
+        val question: QuestionPrompt? = null,
     ) : AssistantBlock
 }
 

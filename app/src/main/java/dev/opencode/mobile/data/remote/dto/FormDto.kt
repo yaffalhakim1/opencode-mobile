@@ -1,6 +1,7 @@
 package dev.opencode.mobile.data.remote.dto
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 
 /**
  * A pending question from the agent.
@@ -20,6 +21,13 @@ data class FormDto(
     val sessionID: String = "",
     val title: String = "",
     val fields: List<FormFieldDto> = emptyList(),
+    /**
+     * Free-form record the server attaches, used to say what raised the form.
+     *
+     * `Form.Info` carries this; dropping it lost the only signal that a form
+     * came from the `question` tool rather than from a permission prompt.
+     */
+    val metadata: JsonObject? = null,
 )
 
 @Serializable

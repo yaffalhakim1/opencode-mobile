@@ -123,8 +123,16 @@ object MessageMapper {
             input = state?.get("input")?.let(::flattenInput),
             output = state?.get("content")?.let(::flattenContent),
             error = state?.get("error")?.obj()?.let(::errorText),
+            // Only the question tool's arguments are a form. Everything else
+            // stays a flattened string, which is the right way to show a shell
+            // command or a file path.
+            question = state?.get("input")
+                ?.takeIf { block.string("name") == QUESTION_TOOL }
+                ?.let(::parseQuestionPrompt),
         )
     }
+
+    private const val QUESTION_TOOL = "question"
 
     fun errorText(error: JsonObject): String =
         error.string("message")
