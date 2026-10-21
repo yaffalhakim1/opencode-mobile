@@ -1,8 +1,10 @@
 package dev.opencode.mobile.ui.chat
 
+import dev.opencode.mobile.data.chat.DELIVERY_QUEUE
 import dev.opencode.mobile.data.chat.MentionSpan
 import dev.opencode.mobile.data.chat.MentionTrigger
 import dev.opencode.mobile.data.chat.MentionedFile
+import dev.opencode.mobile.data.chat.QueuedPrompt
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -29,7 +31,7 @@ class FailedSendTest {
             text = "explain the bug",
             attachments = emptyList(),
             mentions = MentionState(),
-            queued = false,
+            delivery = null,
             message = "No connection.",
         )
 
@@ -46,7 +48,7 @@ class FailedSendTest {
             text = "look at this",
             attachments = pending,
             mentions = MentionState(),
-            queued = false,
+            delivery = null,
             message = "No connection.",
         )
 
@@ -61,7 +63,7 @@ class FailedSendTest {
             text = "explain the bug",
             attachments = emptyList(),
             mentions = MentionState(),
-            queued = false,
+            delivery = null,
             message = "No connection.",
         )
 
@@ -77,7 +79,7 @@ class FailedSendTest {
             text = "look at this",
             attachments = listOf(attachment("old.png")),
             mentions = MentionState(),
-            queued = false,
+            delivery = null,
             message = "No connection.",
         )
 
@@ -85,33 +87,23 @@ class FailedSendTest {
     }
 
     @Test
-    fun `a queued prompt that was counted is uncounted again`() {
-        val state = ChatUiState(composer = ChatComposerState(queued = 2))
+    fun `the queued list is left to the server after a failure`() {
+        // The inbox is the server's answer to give. A failed send never got an
+        // id back, so there is nothing local to add or remove.
+        val existing = listOf(
+            QueuedPrompt(id = "msg_1", text = "first", createdAt = 1, steering = false, attachments = 0)
+        )
+        val state = ChatUiState(composer = ChatComposerState(queued = existing))
 
         val restored = state.restoreAfterFailedSend(
-            text = "queued prompt",
+            text = "second prompt",
             attachments = emptyList(),
             mentions = MentionState(),
-            queued = true,
+            delivery = DELIVERY_QUEUE,
             message = "No connection.",
         )
 
-        assertEquals(1, restored.composer.queued)
-    }
-
-    @Test
-    fun `a prompt that was not queued leaves the counter alone`() {
-        val state = ChatUiState(composer = ChatComposerState(queued = 2))
-
-        val restored = state.restoreAfterFailedSend(
-            text = "first prompt",
-            attachments = emptyList(),
-            mentions = MentionState(),
-            queued = false,
-            message = "No connection.",
-        )
-
-        assertEquals(2, restored.composer.queued)
+        assertEquals(existing, restored.composer.queued)
     }
 
     @Test
@@ -124,7 +116,7 @@ class FailedSendTest {
             text = "queued prompt",
             attachments = emptyList(),
             mentions = MentionState(),
-            queued = true,
+            delivery = DELIVERY_QUEUE,
             message = "No connection.",
         )
 
@@ -150,7 +142,7 @@ class FailedSendTest {
             text = "look at @src/server.ts",
             attachments = emptyList(),
             mentions = mentioned,
-            queued = false,
+            delivery = null,
             message = "No connection.",
         )
 
@@ -170,7 +162,7 @@ class FailedSendTest {
             text = "look at @src",
             attachments = emptyList(),
             mentions = mentioned,
-            queued = false,
+            delivery = null,
             message = "No connection.",
         )
 

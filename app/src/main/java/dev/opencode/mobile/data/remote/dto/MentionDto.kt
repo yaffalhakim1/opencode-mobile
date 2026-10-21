@@ -53,3 +53,39 @@ data class PromptSkillDto(
     val id: String,
     val mention: PromptMentionDto? = null,
 )
+
+/**
+ * One piece of work waiting in a session's inbox.
+ *
+ * The server admits a prompt durably and delivers it at the next boundary, so
+ * a queued message is a real item with an id — it can be cancelled, or its
+ * delivery can be changed to steer it into the running turn.
+ */
+@Serializable
+data class InboxItemDto(
+    val id: String = "",
+    /** "user", "synthetic", "compaction" or "move". */
+    val type: String = "",
+    val delivery: String = "",
+    val payload: InboxPayloadDto = InboxPayloadDto(),
+    val time: InboxTimeDto = InboxTimeDto(),
+)
+
+/** What a queued item actually says. */
+@Serializable
+data class InboxPayloadDto(
+    val text: String = "",
+    val files: List<PromptFileDto> = emptyList(),
+    val skills: List<PromptSkillDto> = emptyList(),
+    val description: String? = null,
+)
+
+@Serializable
+data class InboxTimeDto(
+    val created: Double = 0.0,
+)
+
+@Serializable
+data class InboxPage(
+    val data: List<InboxItemDto> = emptyList(),
+)

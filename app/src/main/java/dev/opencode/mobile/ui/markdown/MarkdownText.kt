@@ -1,6 +1,7 @@
 package dev.opencode.mobile.ui.markdown
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,12 +16,18 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
@@ -119,10 +126,24 @@ internal fun InlineText(
         codeBackground = MaterialTheme.extendedColors.codeBackground,
     )
     val annotated = remember(inline, palette) { inline.toAnnotatedString(palette) }
+    val context = LocalContext.current
+    var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
+
     Text(
         text = annotated,
         style = style.copy(color = color),
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            // A link is only a colour until a tap can find it. The tap is
+            // resolved against the layout the text was drawn with.
+            .pointerInput(inline, layout) {
+                detectTapGestures { offset ->
+                    val position = layout?.getOffsetForPosition(offset) ?: return@detectTapGestures
+                    val url = inline.linkAt(position) ?: return@detectTapGestures
+                    openLink(context, url)
+                }
+            },
+        onTextLayout = { layout = it },
     )
 }
 
@@ -157,6 +178,26 @@ internal fun MdInline.toAnnotatedString(palette: SpanPalette): AnnotatedString {
         }
         if (cursor < text.length) append(text.substring(cursor))
     }
+}
+
+/**
+ * The link at [position], if there is one.
+ *
+ * The destination lives on the span, not on the rendered text, so a tap is
+ * resolved by asking which span covers the character it landed on.
+ */
+internal fun MdInline.linkAt(position: Int): String? =
+    spans.firstOrNull { position >= it.start && position < it.end }?.url
+
+/** Opens [url] in whatever the phone uses for it. */
+internal fun openLink(context: android.content.Context, url: String) {
+    runCatching {
+        context.startActivity(
+            android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    }
+    Unit
 }
 
 /** Resolved theme colours, so span construction stays a pure function. */

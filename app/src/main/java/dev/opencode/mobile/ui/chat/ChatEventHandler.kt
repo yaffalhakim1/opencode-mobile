@@ -30,6 +30,14 @@ enum class ChatEventEffect {
      * turn runs is the safety net.
      */
     WatchBlocking,
+
+    /**
+     * Re-read the prompts waiting in the inbox.
+     *
+     * A queued message is an inbox item, so what is still waiting is the
+     * server's answer to give, not something to be inferred from events.
+     */
+    RefreshInbox,
 }
 
 /** The state after an event, and what the view model has to do about it. */
@@ -78,7 +86,11 @@ class ChatEventHandler(
             -> session.executionEnded(state)
 
             "session.idle" -> session.idle(state)
-            "session.inbox.delivered", "session.inbox.cancelled" -> session.inboxSettled(state)
+            "session.inbox.delivered",
+            "session.inbox.cancelled",
+            "session.inbox.enqueued",
+            "session.inbox.delivery.changed",
+            -> session.inboxChanged(state)
 
             "form.created" -> session.formCreated(state, event)
             "form.settled", "form.replied", "form.cancelled" -> session.formSettled(state, event)

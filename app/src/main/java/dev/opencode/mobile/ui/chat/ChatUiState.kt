@@ -2,9 +2,11 @@ package dev.opencode.mobile.ui.chat
 
 import dev.opencode.mobile.data.chat.AppliedMention
 import dev.opencode.mobile.data.chat.ChatEntry
+import dev.opencode.mobile.data.chat.DELIVERY_QUEUE
 import dev.opencode.mobile.data.chat.MentionedFile
 import dev.opencode.mobile.data.chat.MentionedSkill
 import dev.opencode.mobile.data.chat.Mentions
+import dev.opencode.mobile.data.chat.QueuedPrompt
 import dev.opencode.mobile.data.remote.dto.FormDto
 import dev.opencode.mobile.data.remote.dto.PermissionRequestDto
 
@@ -40,8 +42,20 @@ data class ChatComposerState(
     val catalog: ChatCatalog = ChatCatalog(),
     val selection: ChatSelection = ChatSelection(),
     val selectionLoading: Boolean = true,
-    /** Prompts accepted while a turn was running and not yet delivered. */
-    val queued: Int = 0,
+    /**
+     * The prompts the server has accepted and not delivered yet.
+     *
+     * These are the user's own messages, shown as messages rather than as a
+     * count, so they can be read, withdrawn, or pushed into the running turn.
+     */
+    val queued: List<QueuedPrompt> = emptyList(),
+    /**
+     * How the next prompt is delivered while a turn is running.
+     *
+     * Queue holds it until the turn finishes; steer runs it at the next step
+     * boundary, which is how a correction reaches a turn already in flight.
+     */
+    val delivery: String = DELIVERY_QUEUE,
 )
 
 /**
@@ -124,15 +138,16 @@ internal fun ChatUiState.restoreAfterFailedSend(
     text: String,
     attachments: List<PendingAttachment>,
     mentions: MentionState,
-    queued: Boolean,
+    delivery: String?,
     message: String,
 ): ChatUiState = copy(
     composer = composer.copy(
         draft = if (composer.draft.isBlank()) text else composer.draft,
         attachments = if (composer.attachments.isEmpty()) attachments else composer.attachments,
-        queued = if (queued) (composer.queued - 1).coerceAtLeast(0) else composer.queued,
     ),
-    timeline = timeline.copy(isRunning = queued && timeline.isRunning),
+    // Only a queued prompt leaves the turn running after a failure: a steered
+    // or immediate one never started a turn of its own.
+    timeline = timeline.copy(isRunning = delivery != null && timeline.isRunning),
     // The mentions go back too, but the list stays closed: the trigger was
     // consumed by the send.
     mention = mentions.copy(trigger = null, suggestions = emptyList(), loading = false),

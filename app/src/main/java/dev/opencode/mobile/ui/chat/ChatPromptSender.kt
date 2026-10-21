@@ -46,22 +46,23 @@ class ChatPromptSender(
     /**
      * Sends the prompt.
      *
-     * While a turn is running the prompt is queued rather than blocked: the
-     * server holds it and delivers it when the agent is free, which is what
-     * you want when you think of something mid-run.
+     * [delivery] decides what happens while a turn is already running:
+     * `queue` holds the prompt until the turn finishes, `steer` runs it at the
+     * next step boundary so a correction reaches the turn in flight. Null lets
+     * the server decide, which is what an idle session wants.
      */
     suspend fun send(
         text: String,
         files: List<PromptFileDto>,
         skills: List<PromptSkillDto>,
-        queued: Boolean,
+        delivery: String?,
     ) {
         api.sendPrompt(
             sessionID = sessionID,
             text = text,
             files = files,
             skills = skills,
-            delivery = if (queued) "queue" else null,
+            delivery = delivery,
         )
     }
 }
