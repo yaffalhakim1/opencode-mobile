@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.0.14]
+
+### Android
+
+- **Fixed: a question from the agent was unreadable and unanswerable.** When the
+  agent asked something, the app drew it as a tool row containing the raw
+  arguments — `questions: [{"header":"...","options":[...]}]` — with no way to
+  reply. The question now shows its own text and its options as tappable rows,
+  with the description that explains each choice.
+
+- The card says so plainly when a question can no longer be answered, instead of
+  offering a button that does nothing.
+
 ## [1.0.13]
 
 ### Android
