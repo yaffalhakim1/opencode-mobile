@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.0.11]
+
+### Android
+
+- **Fixed: a picture in a reply showed as the word "image".** When the agent
+  showed a screenshot it wrote it as a picture, and the app read that as text,
+  so the word "image" appeared where the screenshot should be. Pictures in a
+  reply now load and display.
+
+- **Fixed: a picture you sent was not shown either.** The same problem on the
+  other side of the conversation — your own message showed the word "image"
+  instead of the file you attached. Your messages are rendered properly now,
+  and a picture you sent is still there when you reopen the session.
+
 ## [1.0.10]
 
 ### Android
