@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.0.12]
+
+### Android
+
+- **You can now steer a running turn instead of only waiting for it.** While
+  the agent is working, the composer offers **Queue** or **Steer**. Steering
+  sends your correction into the turn in flight, so the agent acts on it before
+  it finishes, instead of the message sitting behind the turn.
+
+- **Fixed: a queued message was a count, not your message.** It said "2 prompts
+  queued" and nothing else, so you could not read back what you had sent, take
+  it back, or push it forward. A waiting prompt now appears as the message you
+  wrote, with **withdraw** and **send now** on it.
+
+- **Fixed: links in a reply could not be tapped.** They were coloured like
+  links and did nothing. Tapping one now opens it in whatever your phone uses.
+
 ## [1.0.11]
 
 ### Android
