@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -41,6 +42,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.opencode.mobile.data.chat.DELIVERY_QUEUE
+import dev.opencode.mobile.data.chat.DELIVERY_STEER
 import dev.opencode.mobile.ui.chat.ChatSelection
 import dev.opencode.mobile.ui.chat.MentionList
 import dev.opencode.mobile.ui.chat.MentionState
@@ -75,7 +78,9 @@ fun ChatComposer(
     onPickMention: (MentionSuggestion) -> Unit,
     modifier: Modifier = Modifier,
     placeholder: String = "Ask OpenCode…",
-    queued: Int = 0,
+    /** How the next prompt is delivered while a turn is running. */
+    delivery: String = DELIVERY_QUEUE,
+    onDeliveryChange: (String) -> Unit = {},
 ) {
     val canSend = enabled && value.isNotBlank()
 
@@ -100,16 +105,10 @@ fun ChatComposer(
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (queued > 0) {
-            Text(
-                text = if (queued == 1) {
-                    "1 prompt queued — it runs when the agent is free"
-                } else {
-                    "$queued prompts queued — they run when the agent is free"
-                },
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        // While a turn is running the prompt has somewhere to go. Saying which
+        // is a decision the user should make, not one to infer from a count.
+        if (isRunning) {
+            DeliveryChoice(delivery = delivery, onDeliveryChange = onDeliveryChange)
         }
 
         if (attachments.isNotEmpty()) {
@@ -278,6 +277,46 @@ fun ChatComposer(
                 )
             }
         }
+    }
+}
+
+/**
+ * Queue or steer, while a turn is running.
+ *
+ * Queue holds the prompt until the turn finishes. Steer runs it at the next
+ * step boundary, which is how a correction reaches a turn already in flight
+ * instead of waiting behind it.
+ */
+@Composable
+private fun DeliveryChoice(delivery: String, onDeliveryChange: (String) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "Send",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+        )
+        FilterChip(
+            selected = delivery == DELIVERY_QUEUE,
+            onClick = { onDeliveryChange(DELIVERY_QUEUE) },
+            label = { Text("Queue", style = MaterialTheme.typography.labelSmall) },
+        )
+        FilterChip(
+            selected = delivery == DELIVERY_STEER,
+            onClick = { onDeliveryChange(DELIVERY_STEER) },
+            label = { Text("Steer", style = MaterialTheme.typography.labelSmall) },
+        )
+        Text(
+            text = if (delivery == DELIVERY_STEER) "reaches this turn" else "waits for this turn",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 

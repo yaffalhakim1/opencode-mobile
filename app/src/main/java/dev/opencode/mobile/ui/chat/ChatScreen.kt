@@ -179,9 +179,10 @@ fun ChatScreen(
                     onAttach = { filePicker.launch(arrayOf("*/*")) },
                     onDetach = { viewModel.detach(it) },
                     onOpenSelector = { sheetOpen = true },
-                    queued = state.composer.queued,
                     mention = state.mention,
                     onPickMention = viewModel::mentionPicked,
+                    delivery = state.composer.delivery,
+                    onDeliveryChange = viewModel::setDelivery,
                 )
             }
         },
@@ -241,6 +242,17 @@ fun ChatScreen(
                                 onAnswer = { answer -> viewModel.answerForm(form, answer) },
                             )
                         }
+                    }
+
+                    // The prompts the server has accepted and not delivered
+                    // yet. They sit at the bottom, where the user is looking,
+                    // and each one can be withdrawn or steered.
+                    items(state.composer.queued, key = { "queued-${it.id}" }) { prompt ->
+                        QueuedPromptRow(
+                            prompt = prompt,
+                            onSteer = { viewModel.steerQueued(prompt) },
+                            onCancel = { viewModel.cancelQueued(prompt) },
+                        )
                     }
 
                     items(state.timeline.rows.asReversed(), key = { it.key }) { row ->

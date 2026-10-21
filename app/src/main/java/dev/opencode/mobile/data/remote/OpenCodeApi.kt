@@ -3,6 +3,8 @@ package dev.opencode.mobile.data.remote
 import dev.opencode.mobile.core.net.OpenCodeException
 import dev.opencode.mobile.data.remote.dto.FileEntryDto
 import dev.opencode.mobile.data.remote.dto.FilesPage
+import dev.opencode.mobile.data.remote.dto.InboxItemDto
+import dev.opencode.mobile.data.remote.dto.InboxPage
 import dev.opencode.mobile.data.remote.dto.PromptSkillDto
 import dev.opencode.mobile.data.remote.dto.SkillDto
 import dev.opencode.mobile.data.remote.dto.SkillsPage
@@ -228,6 +230,34 @@ class OpenCodeApi(
     }
 
     /**
+     * The work waiting in a session's inbox, in the order it will be delivered.
+     *
+     * This is the queued prompts, not the history: a prompt is admitted
+     * durably and only becomes a message once the server delivers it.
+     */
+    suspend fun inbox(sessionID: String): List<InboxItemDto> =
+        get("api/session/$sessionID/inbox") { body ->
+            json.decodeFromString(InboxPage.serializer(), body).data
+        }
+
+    /** Withdraws a queued item that has not been delivered yet. */
+    suspend fun cancelInbox(sessionID: String, inboxID: String) {
+        delete("api/session/$sessionID/inbox/$inboxID")
+    }
+
+    /**
+     * Changes when a queued item is delivered.
+     *
+     * `steer` wakes the session and runs the item at the next step boundary,
+     * which is what makes a correction reach a turn that is already running
+     * instead of waiting behind it.
+     */
+    suspend fun setInboxDelivery(sessionID: String, inboxID: String, delivery: String) {
+        val payload = buildJsonObject { put("delivery", delivery) }
+        patch("api/session/$sessionID/inbox/$inboxID", payload) { }
+    }
+
+    /**
      * Sessions currently being drained by the server.
      *
      * The response is a map keyed by session id; only the keys matter here.
@@ -327,6 +357,19 @@ class OpenCodeApi(
     private suspend fun delete(path: String) {
         val request = Request.Builder().url("${connection.baseUrl}/$path").delete().build()
         execute(request) { }
+    }
+
+    private suspend fun <T> patch(
+        path: String,
+        payload: JsonObject,
+        decode: (String) -> T,
+    ): T {
+        val body = payload.toString().toRequestBody(JSON_MEDIA_TYPE)
+        val request = Request.Builder()
+            .url("${connection.baseUrl}/$path")
+            .patch(body)
+            .build()
+        return execute(request, decode)
     }
 
     private suspend fun <T> execute(request: Request, decode: (String) -> T): T =

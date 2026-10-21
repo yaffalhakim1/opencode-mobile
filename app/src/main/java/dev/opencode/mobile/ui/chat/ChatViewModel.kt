@@ -13,6 +13,7 @@ import dev.opencode.mobile.data.chat.MentionTrigger
 import dev.opencode.mobile.data.chat.MentionedFile
 import dev.opencode.mobile.data.chat.MentionedSkill
 import dev.opencode.mobile.data.chat.Mentions
+import dev.opencode.mobile.data.chat.QueuedPrompt
 import dev.opencode.mobile.data.chat.MessageMapper
 import dev.opencode.mobile.data.chat.TimelineReducer
 import dev.opencode.mobile.data.remote.EventStream
@@ -79,6 +80,7 @@ class ChatViewModel(
     private val blocking = ChatBlockingWatcher(sessionID, api)
     private val sender = ChatPromptSender(sessionID, api, attachments)
     private val mentions = ChatMentions(api, sessionDirectory)
+    private val inbox = ChatInbox(sessionID, api)
     private val stream = ChatStreamConnection(
         events = events,
         scope = viewModelScope,
@@ -94,6 +96,7 @@ class ChatViewModel(
         // One check on open: a question or a permission may already be waiting
         // from a turn that started while the app was closed.
         viewModelScope.launch { blocking.pollOnce() }
+        refreshInbox()
     }
 
     // ---- composer ----------------------------------------------------------
@@ -294,7 +297,11 @@ class ChatViewModel(
         val text = current.composer.draft.trim()
         if (text.isEmpty()) return
 
-        val queued = current.timeline.isRunning
+        // Delivery only matters while a turn is running: an idle session takes
+        // the prompt immediately, and asking it to steer or queue would be a
+        // promise the server has nothing to act on.
+        val running = current.timeline.isRunning
+        val delivery = if (running) current.composer.delivery else null
         _state.update { it.copy(error = null) }
 
         viewModelScope.launch {
@@ -318,21 +325,20 @@ class ChatViewModel(
 
             _state.update {
                 it.copy(
-                    composer = it.composer.copy(
-                        draft = "",
-                        attachments = emptyList(),
-                        queued = if (queued) it.composer.queued + 1 else it.composer.queued,
-                    ),
+                    composer = it.composer.copy(draft = "", attachments = emptyList()),
                     timeline = it.timeline.copy(isRunning = true),
                     mention = it.mention.copy(attachedFiles = emptyList(), attachedSkills = emptyList()),
                 )
             }
 
             try {
-                sender.send(text, files, skills, queued)
+                sender.send(text, files, skills, delivery)
+                // A queued or steered prompt is an inbox item, so re-read the
+                // inbox rather than guessing at a count.
+                refreshInbox()
             } catch (e: OpenCodeException) {
                 _state.update {
-                    it.restoreAfterFailedSend(text, current.composer.attachments, current.mention, queued, e.message)
+                    it.restoreAfterFailedSend(text, current.composer.attachments, current.mention, delivery, e.message)
                 }
             } catch (e: Exception) {
                 _state.update {
@@ -340,11 +346,49 @@ class ChatViewModel(
                         text,
                         current.composer.attachments,
                         current.mention,
-                        queued,
+                        delivery,
                         e.message ?: "Could not send the prompt.",
                     )
                 }
             }
+        }
+    }
+
+    /** How the next prompt is delivered while a turn is running. */
+    fun setDelivery(delivery: String) {
+        _state.update { it.copy(composer = it.composer.copy(delivery = delivery)) }
+    }
+
+    /**
+     * The prompts waiting in the inbox.
+     *
+     * They are the user's own messages: shown as messages so they can be read,
+     * withdrawn, or pushed into the running turn.
+     */
+    private fun refreshInbox() {
+        viewModelScope.launch {
+            runCatching { inbox.list() }
+                .onSuccess { prompts -> _state.update { inbox.inState(it, prompts) } }
+        }
+    }
+
+    /** Withdraws a queued prompt before the server delivers it. */
+    fun cancelQueued(prompt: QueuedPrompt) {
+        _state.update { inbox.remove(prompt, it) }
+        viewModelScope.launch {
+            runCatching { inbox.cancel(prompt) }
+                .onFailure { e ->
+                    _state.update { inbox.restore(prompt, it).copy(error = e.message ?: "Could not withdraw that message.") }
+                }
+        }
+    }
+
+    /** Sends a queued prompt into the running turn. */
+    fun steerQueued(prompt: QueuedPrompt) {
+        viewModelScope.launch {
+            runCatching { inbox.steerIn(prompt, _state.value) }
+                .onSuccess { updated -> _state.value = updated }
+                .onFailure { e -> _state.update { it.copy(error = e.message ?: "Could not steer that message.") } }
         }
     }
 
@@ -471,6 +515,7 @@ class ChatViewModel(
                 ChatEventEffect.Resync -> scheduleResync()
                 ChatEventEffect.Refresh -> refresh()
                 ChatEventEffect.WatchBlocking -> watchBlocking()
+                ChatEventEffect.RefreshInbox -> refreshInbox()
             }
         }
     }

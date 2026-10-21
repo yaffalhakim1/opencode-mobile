@@ -70,10 +70,14 @@ class ChatSessionEvents(private val events: EventStream) {
     fun idle(state: ChatUiState): ChatEventOutcome =
         ChatEventOutcome(state.copy(timeline = state.timeline.copy(isRunning = false)))
 
-    fun inboxSettled(state: ChatUiState): ChatEventOutcome {
-        val queued = (state.composer.queued - 1).coerceAtLeast(0)
-        return ChatEventOutcome(state.copy(composer = state.composer.copy(queued = queued)))
-    }
+    /**
+     * A queued prompt was delivered or withdrawn.
+     *
+     * The list is re-read rather than decremented: the server decides what is
+     * still waiting, and a counter would drift from it.
+     */
+    fun inboxChanged(state: ChatUiState): ChatEventOutcome =
+        ChatEventOutcome(state, effects = setOf(ChatEventEffect.RefreshInbox))
 
     /**
      * A `question` tool raises a form and blocks the turn. The event carries
