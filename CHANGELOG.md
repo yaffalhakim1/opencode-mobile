@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.0.13]
+
+### Android
+
+- **Seven themes to choose from.** Settings → Appearance → Palette now offers
+  OpenCode (the app's own green), Midnight, Tide, Plum, Ember, Sand and Mono.
+  Each is a real Material 3 scheme generated from a single seed colour, so every
+  colour role agrees with the others instead of being hand-picked.
+
+- **The palette and light/dark are separate choices.** A theme supplies both a
+  light and a dark set, so picking one does not pin it to a mode, and following
+  the system still works.
+
+- Each theme is previewed in its own colours in the picker, in the mode currently
+  in effect, so the choice is made by looking at the theme rather than its name.
+
 ## [1.0.12]
 
 ### Android
