@@ -15,6 +15,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.opencode.mobile.data.settings.ThemeChoice
 import dev.opencode.mobile.ui.AppRoot
 import dev.opencode.mobile.ui.theme.OpenCodeTheme
+import dev.opencode.mobile.ui.theme.ThemeFamily
 
 class MainActivity : ComponentActivity() {
 
@@ -33,13 +34,12 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             // The theme comes from the store, so the choice survives a restart
-            // instead of being forgotten with the activity.
+            // instead of being forgotten with the activity. The palette and the
+            // mode are separate choices: one decides the colours, the other
+            // decides whether they are the light or dark set.
             val theme by container.settingsStore.theme.collectAsStateWithLifecycle(ThemeChoice.System)
-            val dark = when (theme) {
-                ThemeChoice.System -> isSystemInDarkTheme()
-                ThemeChoice.Dark -> true
-                ThemeChoice.Light -> false
-            }
+            val family by container.settingsStore.family.collectAsStateWithLifecycle(ThemeFamily.Default)
+            val dark = theme.isDark(isSystemInDarkTheme())
 
             // Icon colour has to follow the app's theme, not the system's: with a
             // pinned dark theme on a light system the icons would be unreadable.
@@ -50,7 +50,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            OpenCodeTheme(darkTheme = dark) {
+            OpenCodeTheme(darkTheme = dark, family = family) {
                 AppRoot(
                     connectionStore = container.connectionStore,
                     settingsStore = container.settingsStore,

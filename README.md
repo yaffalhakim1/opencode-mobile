@@ -49,13 +49,13 @@ core/security   Keystore-backed AES-GCM cipher for the password
 data/remote     HTTP API wrapper, SSE feed, pairing client, DTOs
 data/chat       UI timeline model, message mapping, pure reducers
 data/settings   DataStore persistence
-ui/theme        Colour, type, shape tokens
+ui/theme        Colour schemes, type, shape tokens
 ui/markdown     GFM parser adapter, block model, Compose renderer
 ui/components   Reusable chat primitives
 ui/connect      Pairing (QR/paste) and URL + password
 ui/sessions     Session list
 ui/chat         Timeline, composer, selection sheet, live streaming
-ui/settings     Theme and disconnect
+ui/settings     Theme, palette and disconnect
 ```
 
 One rule shapes the data layer: **the event feed is live-only**. `/api/event` has
@@ -122,12 +122,29 @@ calls open automatically so an error is never hidden behind a tap.
 
 ## Design notes
 
-**Palette.** The brand green (`#26E085` dark, `#00DA7D` light) is a *signal*
-colour, not a surface colour: it marks the logo, the caret and anything that is
-live. Structure is carried by a near-neutral ramp with a faint green bias.
-`primary` is deliberately darker than the brand green in light mode, because the
-brand green cannot carry text on a pale surface; the roles split into an
-accessible action colour and the raw mark colour.
+**Palette.** Seven themes, each a real Material 3 scheme generated from a single
+seed colour by Material's own colour utilities — not a hand-picked set of hexes.
+`primary`/`onPrimary` and every other foreground/background pair is therefore a
+measured tonal pair rather than two values that happened to look fine together.
+Each theme supplies both a light and a dark scheme, so the palette and the mode
+are independent choices: picking a theme does not pin it to one mode.
+
+The extras the theme adds on top of `ColorScheme` are derived from the scheme's
+own roles, so a new theme gets correct code blocks, cards and message bubbles
+without listing them. The one exception is `brand` — the vivid seed hue used for
+the logo, the caret and live pulses — which is deliberately more saturated than
+`primary`, because a mark wants signal and text wants contrast.
+
+The themes are generated, not written by hand:
+
+```bash
+cd tools/theme-gen && npm install && npm run generate
+```
+
+That writes `ui/theme/Themes.kt` and one `Scheme<Name>.kt` per theme. The
+generator measures every rendered pair and refuses to write the file if one
+misses its threshold, and `ThemeFamilyTest` re-checks the committed values — so a
+hand-edit that bypasses the generator still fails.
 
 **Material 3, without the Expressive API.** `MaterialExpressiveTheme`,
 `MotionScheme.expressive()` and `ExperimentalMaterial3ExpressiveApi` are all

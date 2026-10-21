@@ -6,6 +6,7 @@ import dev.opencode.mobile.core.net.ServerConnection
 import dev.opencode.mobile.data.settings.ConnectionStore
 import dev.opencode.mobile.data.settings.SettingsStore
 import dev.opencode.mobile.data.settings.ThemeChoice
+import dev.opencode.mobile.ui.theme.ThemeFamily
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,6 +16,7 @@ import kotlinx.coroutines.launch
 data class SettingsUiState(
     val connection: ServerConnection? = null,
     val theme: ThemeChoice = ThemeChoice.System,
+    val family: ThemeFamily = ThemeFamily.Default,
     val disconnecting: Boolean = false,
 )
 
@@ -35,6 +37,11 @@ class SettingsViewModel(
                 _state.update { it.copy(theme = theme) }
             }
         }
+        viewModelScope.launch {
+            settings.family.collect { family ->
+                _state.update { it.copy(family = family) }
+            }
+        }
     }
 
     /**
@@ -47,6 +54,18 @@ class SettingsViewModel(
     fun setTheme(choice: ThemeChoice) {
         _state.update { it.copy(theme = choice) }
         viewModelScope.launch { settings.setTheme(choice) }
+    }
+
+    /**
+     * The palette the user picked.
+     *
+     * Applied to the screen immediately and written in the background: the whole
+     * screen recolours as soon as the state changes, so waiting for the disk
+     * would make the picker feel like it missed the tap.
+     */
+    fun setFamily(family: ThemeFamily) {
+        _state.update { it.copy(family = family) }
+        viewModelScope.launch { settings.setFamily(family) }
     }
 
     fun disconnect(onDone: () -> Unit) {
