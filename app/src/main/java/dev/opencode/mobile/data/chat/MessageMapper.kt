@@ -25,7 +25,9 @@ object MessageMapper {
         return when (message.string("type")) {
             "user" -> ChatEntry.User(
                 id = id,
-                text = message.string("text").orEmpty(),
+                // A user message can carry attachments, and the picture the
+                // user sent is one of them. The text alone would drop it.
+                text = userText(message),
                 createdAt = createdAt,
             )
 
@@ -67,6 +69,29 @@ object MessageMapper {
 
             else -> null
         }
+    }
+
+    /**
+     * The text of a user message, with its attachments named in it.
+     *
+     * A stored message keeps the files it was sent with as `{ data, mime,
+     * source }`, separate from the text. A picture among them is turned into a
+     * markdown image so the renderer shows it, rather than the message
+     * pretending the file was never there.
+     */
+    private fun userText(message: JsonObject): String {
+        val text = message.string("text").orEmpty()
+        val files = message["files"]?.arr() ?: return text
+        val images = files.mapNotNull { element ->
+            val file = element.obj() ?: return@mapNotNull null
+            val mime = file.string("mime").orEmpty()
+            if (!mime.startsWith("image/")) return@mapNotNull null
+            val data = file.string("data") ?: return@mapNotNull null
+            val name = file.string("name").orEmpty()
+            "![${name.ifBlank { "image" }}](data:$mime;base64,$data)"
+        }
+        if (images.isEmpty()) return text
+        return (listOf(text.trim()).filter { it.isNotEmpty() } + images).joinToString("\n\n")
     }
 
     private fun contentBlocks(message: JsonObject, id: String): List<AssistantBlock> =

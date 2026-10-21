@@ -15,13 +15,26 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
+import coil3.network.NetworkHeaders
+import coil3.network.httpHeaders
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import dev.opencode.mobile.data.chat.ImageSource
 import dev.opencode.mobile.ui.components.CodeBlock
 import dev.opencode.mobile.ui.theme.extendedColors
 /**
@@ -48,10 +61,96 @@ internal fun MdBlockView(block: MdBlock, style: TextStyle, color: Color) {
         is MdBlock.Quote -> Quote(block, style, color)
         is MdBlock.Alert -> Alert(block, style, color)
         is MdBlock.Table -> Table(block, color)
+        is MdBlock.Image -> MarkdownImage(block)
         MdBlock.Rule -> HorizontalDivider(
             modifier = Modifier.padding(vertical = 4.dp),
             color = MaterialTheme.colorScheme.outlineVariant,
         )
+    }
+}
+
+/**
+ * A picture in a document.
+ *
+ * The path in the markdown names a file on the machine running the server, so
+ * it is resolved into a request for the server's own copy. The frame around it
+ * is the same surface the code blocks use, so a picture and a snippet read as
+ * the same kind of thing.
+ *
+ * A picture that cannot be loaded falls back to its description rather than
+ * leaving a gap: the model usually wrote one, and a broken image says less
+ * than the words do.
+ */
+@Composable
+internal fun MarkdownImage(block: MdBlock.Image) {
+    val context = LocalContext.current
+    val baseUrl = LocalServer.baseUrl.current
+    val directory = LocalServer.directory.current
+
+    val resolved = remember(block.src, baseUrl, directory) {
+        ImageSource.resolve(baseUrl, directory, block.src)
+    }
+
+    // The bytes of an inline picture, or the URL of one the server holds.
+    val model: Any? = when (resolved) {
+        is ImageSource.Resolved.Inline -> resolved.bytes
+        is ImageSource.Resolved.Remote -> ImageRequest.Builder(context)
+            .data(resolved.url)
+            // The bytes come from the server, so the auth header travels with
+            // the request instead of being in the URL.
+            .httpHeaders(
+                NetworkHeaders.Builder()
+                    .set("Authorization", LocalServer.authorization.current)
+                    .build()
+            )
+            .crossfade(true)
+            .build()
+
+        null -> null
+    }
+
+    var failed by remember(block.src) { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.extendedColors.cardSurface, MaterialTheme.shapes.medium)
+                .padding(6.dp),
+        ) {
+            if (model == null || failed) {
+                Text(
+                    text = block.alt.ifBlank { "Image" },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(6.dp),
+                )
+            } else {
+                AsyncImage(
+                    model = model,
+                    contentDescription = block.alt.ifBlank { null },
+                    // A picture in a reply is content, not a thumbnail: keep its
+                    // proportions and let it use the width it has.
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.small),
+                    onError = { failed = true },
+                )
+            }
+        }
+        if (block.alt.isNotBlank() && !failed) {
+            Text(
+                text = block.alt,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

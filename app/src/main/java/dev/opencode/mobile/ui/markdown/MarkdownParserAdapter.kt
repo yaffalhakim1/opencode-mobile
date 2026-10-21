@@ -49,10 +49,7 @@ object MarkdownParserAdapter {
         MarkdownElementTypes.SETEXT_1 -> setext(node, src, 1)
         MarkdownElementTypes.SETEXT_2 -> setext(node, src, 2)
 
-        MarkdownElementTypes.PARAGRAPH -> {
-            val inline = MarkdownInlineParser.inline(node, src)
-            if (inline.isBlank) null else MdBlock.Paragraph(inline)
-        }
+        MarkdownElementTypes.PARAGRAPH -> paragraph(node, src)
 
         MarkdownElementTypes.CODE_FENCE -> fenced(node, src)
         MarkdownElementTypes.CODE_BLOCK -> indented(node, src)
@@ -70,6 +67,41 @@ object MarkdownParserAdapter {
         MarkdownElementTypes.LINK_DEFINITION -> null
 
         else -> null
+    }
+
+    /**
+     * A paragraph, unless it is a picture on its own.
+     *
+     * A model that wants to show a picture writes it as its own paragraph:
+     * `![alt](path)`. Rendering that as text produced the literal word "image"
+     * where the picture should be, so a paragraph holding nothing but an image
+     * becomes one.
+     */
+    private fun paragraph(node: ASTNode, src: String): MdBlock? {
+        val only = node.children.firstOrNull()
+        if (node.children.size == 1 && only != null && only.type == MarkdownElementTypes.IMAGE) {
+            image(only, src)?.let { return it }
+        }
+        val inline = MarkdownInlineParser.inline(node, src)
+        return if (inline.isBlank) null else MdBlock.Paragraph(inline)
+    }
+
+    private fun image(node: ASTNode, src: String): MdBlock.Image? {
+        // An IMAGE node wraps an INLINE_LINK, which holds the destination and
+        // the label. Looking only at the image's own children finds neither.
+        val link = node.children.firstOrNull { it.type == MarkdownElementTypes.INLINE_LINK }
+            ?: node
+        val destination = link.children
+            .firstOrNull { it.type == MarkdownElementTypes.LINK_DESTINATION }
+            ?: return null
+        val path = text(destination, src).trim().trim('<', '>')
+        if (path.isBlank()) return null
+        val alt = link.children
+            .firstOrNull { it.type == MarkdownElementTypes.LINK_TEXT }
+            ?.let { label -> MarkdownInlineParser.inline(label, src).text }
+            ?.trim('[', ']')
+            .orEmpty()
+        return MdBlock.Image(src = path, alt = alt)
     }
 
     private fun heading(node: ASTNode, src: String, level: Int): MdBlock? {

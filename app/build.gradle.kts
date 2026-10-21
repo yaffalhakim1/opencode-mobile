@@ -144,5 +144,8 @@ dependencies {
     implementation(libs.androidx.camera.view)
     implementation(libs.mlkit.barcode)
 
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
+
     testImplementation(libs.junit)
 }

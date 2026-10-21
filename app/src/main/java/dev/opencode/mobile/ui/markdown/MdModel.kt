@@ -32,6 +32,17 @@ sealed interface MdBlock {
         val rows: List<List<MdInline>>,
     ) : MdBlock
 
+    /**
+     * A picture the document points at.
+     *
+     * [src] is whatever the markdown said — usually a path on the machine
+     * running the server — and [alt] is what to show when it cannot be loaded.
+     */
+    data class Image(
+        val src: String,
+        val alt: String,
+    ) : MdBlock
+
     data object Rule : MdBlock
 }
 
