@@ -27,3 +27,10 @@ Thumbs.db
 # committed here was rotated when the repo went public.
 keystore/
 keystore.properties
+
+# Tools
+#
+# The theme generator in tools/theme-gen is committed, because the generated
+# colour schemes are only reproducible if the thing that produced them is too.
+# Its dependencies are not.
+tools/theme-gen/node_modules/

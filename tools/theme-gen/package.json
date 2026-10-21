@@ -1,0 +1,12 @@
+{
+  "name": "opencode-mobile-theme-gen",
+  "private": true,
+  "description": "Generates app/src/main/java/dev/opencode/mobile/ui/theme/Themes.kt",
+  "type": "module",
+  "scripts": {
+    "generate": "node generate.js"
+  },
+  "dependencies": {
+    "@material/material-color-utilities": "0.3.0"
+  }
+}

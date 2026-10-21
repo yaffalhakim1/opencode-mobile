@@ -1,8 +1,6 @@
 package dev.opencode.mobile.ui.theme
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
@@ -10,65 +8,13 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-private val DarkScheme = darkColorScheme(
-    primary = Palette.DarkPrimary,
-    onPrimary = Palette.DarkOnPrimary,
-    primaryContainer = Palette.DarkPrimaryContainer,
-    onPrimaryContainer = Palette.DarkOnPrimaryContainer,
-    secondary = Palette.DarkSecondary,
-    onSecondary = Palette.DarkOnSecondary,
-    secondaryContainer = Palette.DarkSecondaryContainer,
-    onSecondaryContainer = Palette.DarkOnSecondaryContainer,
-    tertiary = Palette.DarkTertiary,
-    onTertiary = Palette.DarkOnTertiary,
-    tertiaryContainer = Palette.DarkTertiaryContainer,
-    onTertiaryContainer = Palette.DarkOnTertiaryContainer,
-    error = Palette.DarkError,
-    onError = Palette.DarkOnError,
-    errorContainer = Palette.DarkErrorContainer,
-    onErrorContainer = Palette.DarkOnErrorContainer,
-    background = Palette.DarkBackground,
-    onBackground = Palette.DarkOnBackground,
-    surface = Palette.DarkSurface,
-    onSurface = Palette.DarkOnSurface,
-    surfaceVariant = Palette.DarkSurfaceVariant,
-    onSurfaceVariant = Palette.DarkOnSurfaceVariant,
-    outline = Palette.DarkOutline,
-    outlineVariant = Palette.DarkOutlineVariant,
-)
-
-private val LightScheme = lightColorScheme(
-    primary = Palette.LightPrimary,
-    onPrimary = Palette.LightOnPrimary,
-    primaryContainer = Palette.LightPrimaryContainer,
-    onPrimaryContainer = Palette.LightOnPrimaryContainer,
-    secondary = Palette.LightSecondary,
-    onSecondary = Palette.LightOnSecondary,
-    secondaryContainer = Palette.LightSecondaryContainer,
-    onSecondaryContainer = Palette.LightOnSecondaryContainer,
-    tertiary = Palette.LightTertiary,
-    onTertiary = Palette.LightOnTertiary,
-    tertiaryContainer = Palette.LightTertiaryContainer,
-    onTertiaryContainer = Palette.LightOnTertiaryContainer,
-    error = Palette.LightError,
-    onError = Palette.LightOnError,
-    errorContainer = Palette.LightErrorContainer,
-    onErrorContainer = Palette.LightOnErrorContainer,
-    background = Palette.LightBackground,
-    onBackground = Palette.LightOnBackground,
-    surface = Palette.LightSurface,
-    onSurface = Palette.LightOnSurface,
-    surfaceVariant = Palette.LightSurfaceVariant,
-    onSurfaceVariant = Palette.LightOnSurfaceVariant,
-    outline = Palette.LightOutline,
-    outlineVariant = Palette.LightOutlineVariant,
-)
-
 /**
  * Surfaces the theme adds beyond `ColorScheme`.
  *
- * [brand] is the unmodified logo green: it fails contrast as text on light
- * surfaces, so it is only ever used for marks, carets and live pulses.
+ * [brand] is the unmodified seed hue: it fails contrast as body text on light
+ * surfaces, so it is only ever used for marks, carets and live pulses. Everything
+ * else here is derived from the scheme's own roles, which is what keeps the
+ * extras in step when the theme changes.
  */
 @Immutable
 data class ExtendedColors(
@@ -98,27 +44,27 @@ internal val LocalExtendedColors = staticCompositionLocalOf {
 val MaterialTheme.extendedColors: ExtendedColors
     @Composable @ReadOnlyComposable get() = LocalExtendedColors.current
 
-private val DarkExtended = ExtendedColors(
-    brand = Palette.BrandDark,
-    codeBackground = Color(0xFF11170F),
-    codeBorder = Color(0xFF2A332D),
-    userBubble = Palette.DarkPrimaryContainer,
-    userBubbleText = Palette.DarkOnPrimaryContainer,
-    cardSurface = Color(0xFF141A16),
-    cardBorder = Color(0xFF2A332D),
-    success = Palette.BrandDark,
-)
-
-private val LightExtended = ExtendedColors(
-    brand = Palette.BrandLight,
-    codeBackground = Color(0xFFEFF5F0),
-    codeBorder = Color(0xFFD3DDD6),
-    userBubble = Palette.LightPrimaryContainer,
-    userBubbleText = Palette.LightOnPrimaryContainer,
-    cardSurface = Color(0xFFF1F6F2),
-    cardBorder = Color(0xFFD9E3DC),
-    success = Color(0xFF0A7B45),
-)
+/**
+ * The extras for one theme in one mode.
+ *
+ * They are taken from the scheme rather than hard-coded per theme, so a new
+ * theme gets correct code blocks, bubbles and cards without listing them: a code
+ * block is the theme's own "highest container" surface, which is the M3 role for
+ * exactly this.
+ */
+private fun extendedFor(family: ThemeFamily, dark: Boolean): ExtendedColors {
+    val scheme = family.scheme(dark)
+    return ExtendedColors(
+        brand = family.brand(dark),
+        codeBackground = scheme.surfaceContainerHighest,
+        codeBorder = scheme.outlineVariant,
+        userBubble = scheme.primaryContainer,
+        userBubbleText = scheme.onPrimaryContainer,
+        cardSurface = scheme.surfaceContainerLow,
+        cardBorder = scheme.outlineVariant,
+        success = family.success(dark),
+    )
+}
 
 /**
  * M3 Expressive cannot be enabled from this module: `MaterialExpressiveTheme`,
@@ -128,18 +74,19 @@ private val LightExtended = ExtendedColors(
  *
  * The visible part of Expressive — the emphasized type scale, the ten-step corner
  * scale and the tonal palette — is applied directly through `MaterialTheme`.
+ *
+ * [family] is the palette; [darkTheme] is the mode. They are independent on
+ * purpose: a theme supplies both, so pinning a theme does not pin it to one mode.
  */
 @Composable
 fun OpenCodeTheme(
     darkTheme: Boolean,
+    family: ThemeFamily = ThemeFamily.Default,
     content: @Composable () -> Unit,
 ) {
-    val colorScheme = if (darkTheme) DarkScheme else LightScheme
-    val extended = if (darkTheme) DarkExtended else LightExtended
-
-    CompositionLocalProvider(LocalExtendedColors provides extended) {
+    CompositionLocalProvider(LocalExtendedColors provides extendedFor(family, darkTheme)) {
         MaterialTheme(
-            colorScheme = colorScheme,
+            colorScheme = family.scheme(darkTheme),
             shapes = AppShapes,
             typography = AppTypography,
             content = content,

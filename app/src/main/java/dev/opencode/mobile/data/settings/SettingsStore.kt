@@ -3,10 +3,10 @@ package dev.opencode.mobile.data.settings
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import dev.opencode.mobile.ui.theme.ThemeFamily
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -37,8 +37,28 @@ class SettingsStore(private val context: Context) {
         }
     }
 
+    /**
+     * The palette the user picked.
+     *
+     * Separate from [theme] on purpose: the palette and light/dark are different
+     * questions, and storing them separately is what lets someone keep their
+     * theme while following the system's mode.
+     */
+    val family: Flow<ThemeFamily> = context.settingsDataStore.data.map { preferences ->
+        // Stored by name rather than by ordinal: reordering or removing a theme
+        // must not silently hand someone a different one.
+        ThemeFamily.fromStored(preferences[FAMILY_KEY])
+    }
+
+    suspend fun setFamily(family: ThemeFamily) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[FAMILY_KEY] = family.name
+        }
+    }
+
     private companion object {
         val THEME_KEY = stringPreferencesKey("theme")
+        val FAMILY_KEY = stringPreferencesKey("theme_family")
     }
 }
 
@@ -52,4 +72,18 @@ enum class ThemeChoice(val stored: String) {
 
     /** Always dark. */
     Dark("dark"),
+
+    ;
+
+    /**
+     * Whether this choice means the dark set.
+     *
+     * One definition, because two copies of this rule is how the settings screen
+     * and the app end up disagreeing about which mode is in effect.
+     */
+    fun isDark(systemDark: Boolean): Boolean = when (this) {
+        System -> systemDark
+        Dark -> true
+        Light -> false
+    }
 }

@@ -2,6 +2,7 @@ package dev.opencode.mobile.ui.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -125,6 +126,38 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            Spacer(Modifier.height(8.dp))
+
+            // The palette is a separate choice from the mode: a theme supplies
+            // both a light and a dark set, so picking one does not pin the other.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = "Palette",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = "Colours for the whole app. Each is shown in the mode in effect.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            ThemeFamilyPicker(
+                selected = state.family,
+                // Previews use the mode actually in effect, so a pinned dark
+                // theme does not show its light set on a light phone.
+                dark = state.theme.isDark(isSystemInDarkTheme()),
+                onSelect = viewModel::setFamily,
+            )
 
             Spacer(Modifier.height(24.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
