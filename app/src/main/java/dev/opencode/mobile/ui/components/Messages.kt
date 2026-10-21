@@ -32,6 +32,11 @@ import dev.opencode.mobile.ui.theme.extendedColors
 /**
  * A user turn. Right-aligned and tonally filled so the conversation's authorship
  * is readable at a glance without avatars competing for attention.
+ *
+ * The text goes through the same markdown renderer as a reply, because the
+ * server stores a message exactly as it was sent: a picture the user attached
+ * comes back as an inline `data:` image in the text, and a message that was
+ * rendered as one flat string showed nothing but the literal word "image".
  */
 @Composable
 fun UserMessage(
@@ -48,8 +53,8 @@ fun UserMessage(
                 .background(MaterialTheme.extendedColors.userBubble, MaterialTheme.shapes.large)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
-            Text(
-                text = entry.text,
+            MarkdownText(
+                markdown = entry.text,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.extendedColors.userBubbleText,
             )

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,11 +34,13 @@ import dev.opencode.mobile.ui.chat.ChatScreen
 import dev.opencode.mobile.ui.chat.ChatViewModel
 import dev.opencode.mobile.ui.connect.ConnectScreen
 import dev.opencode.mobile.ui.connect.ConnectViewModel
+import dev.opencode.mobile.ui.markdown.LocalServer
 import dev.opencode.mobile.ui.sessions.SessionListScreen
 import dev.opencode.mobile.ui.sessions.SessionListViewModel
 import dev.opencode.mobile.ui.settings.SettingsScreen
 import dev.opencode.mobile.ui.settings.SettingsViewModel
 import kotlinx.coroutines.launch
+import okhttp3.Credentials
 
 /**
  * Screen stack for a three-destination app.
@@ -148,13 +151,25 @@ fun AppRoot(
                 if (active == null) {
                     route = Route.Connect
                 } else {
-                    ChatScreen(
-                        viewModel = viewModel(
-                            key = "chat-${current.sessionID}",
-                            factory = chatFactory(active, current, appContext),
+                    // Images in a reply point at files on the server, so the
+                    // renderer needs the address and the same credentials the
+                    // rest of the client uses.
+                    CompositionLocalProvider(
+                        LocalServer.baseUrl provides active.baseUrl,
+                        LocalServer.directory provides current.directory,
+                        LocalServer.authorization provides Credentials.basic(
+                            HttpClientFactory.USERNAME,
+                            active.password,
                         ),
-                        onBack = { route = Route.Sessions },
-                    )
+                    ) {
+                        ChatScreen(
+                            viewModel = viewModel(
+                                key = "chat-${current.sessionID}",
+                                factory = chatFactory(active, current, appContext),
+                            ),
+                            onBack = { route = Route.Sessions },
+                        )
+                    }
                 }
             }
 

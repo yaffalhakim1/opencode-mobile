@@ -74,6 +74,19 @@ Parsing happens once per message into an immutable block model
 (`ui/markdown/MdModel.kt`), so the renderer is a pure function of the document
 and long answers do not re-parse on every recomposition.
 
+**Images.** A model shows a screenshot by writing `![alt](path)` as its own
+paragraph, and that path is on the machine running the server — the phone has no
+such file. Such a paragraph becomes an image block, and the path is resolved
+into a request for the server's own copy (`/api/fs/read/...`, with the project
+as `location[directory]`). A `data:` URI is decoded locally instead, which is
+how a picture the user attached comes back: Coil does not decode those itself.
+A picture that cannot be loaded falls back to its description rather than
+leaving a gap.
+
+The user's own message is rendered through the same markdown path, so an
+attachment the server stored as `files` shows as the picture it is rather than
+as the literal word "image".
+
 **Agent, model and effort.** One control in the composer opens a sheet with all
 three, because they are a single decision about *who answers this*. The sheet is
 populated from `/api/agent` and `/api/model`; effort options come from the
@@ -217,6 +230,7 @@ worth it for a feature that must work on the first try.
 | `GET` | `/api/model` — model catalog and variants |
 | `GET` | `/api/skill` — skills, for `/` mentions |
 | `GET` | `/api/fs/find` — files, for `@` mentions |
+| `GET` | `/api/fs/read/*` — one file's bytes, for images in a reply |
 | `GET` | `/api/event` — SSE |
 
 Auth is `Authorization: Basic base64("opencode:" + password)`.
