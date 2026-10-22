@@ -285,25 +285,23 @@ class OpenCodeApi(
     }
 
     /**
-     * Tells the server which push token belongs to this device.
+     * Writes a file on the server, relative to the project directory.
      *
-     * FCM can reach the phone, but the server has no way to know *which* phone
-     * to reach, so the app reports it. The endpoint is an app-side addition —
-     * see `docs/PUSH_SERVER.md` — and a server that predates it answers 404,
-     * which callers treat as "push unavailable" rather than an error worth
-     * showing.
+     * Used to hand the FCM token to the server plugin, which reads it back.
+     * This is OpenCode's own `POST /api/experimental/fs/write`; no endpoint was
+     * added for push. It takes a **raw body**, not JSON — a JSON content type is
+     * rejected with 415 — and creates missing parent directories.
+     *
+     * `path` must be relative. An absolute path works but the app has no way to
+     * learn the server's home, and `~` is not expanded.
      */
-    suspend fun registerPushToken(
-        token: String,
-        platform: String = "android",
-        appVersion: String = "",
-    ) {
-        val payload = buildJsonObject {
-            put("token", token)
-            put("platform", platform)
-            if (appVersion.isNotBlank()) put("appVersion", appVersion)
-        }
-        post("api/push/token", payload) { }
+    suspend fun writeServerFile(path: String, content: String) {
+        val body = content.toRequestBody(OCTET_STREAM)
+        val url = "${connection.baseUrl}/api/experimental/fs/write".toHttpUrl().newBuilder()
+            .addQueryParameter("path", path)
+            .build()
+        val request = Request.Builder().url(url).post(body).build()
+        execute(request) { }
     }
 
     /**
@@ -426,6 +424,11 @@ class OpenCodeApi(
 
     companion object {
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
+
+        /**
+         * `fs/write` rejects JSON with 415; it wants an opaque body.
+         */
+        private val OCTET_STREAM = "application/octet-stream".toMediaType()
 
         /**
          * Lenient by design: experimental endpoints add fields without warning,

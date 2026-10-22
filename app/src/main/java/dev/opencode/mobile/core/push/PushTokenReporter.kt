@@ -14,9 +14,15 @@ import com.google.firebase.messaging.FirebaseMessaging
  * server has no way to know *which* phone to reach. The app reports the token
  * once it is connected, and the server plugin reads it back.
  *
- * It is deliberately best-effort. A server that does not support the endpoint,
- * a phone with no Firebase project configured, or a transient network failure
- * must all leave the app fully usable — push is an addition, not a dependency.
+ * **No new endpoint is needed.** OpenCode already exposes
+ * `POST /api/experimental/fs/write`, which writes any file on the server, and
+ * the plugin reads that file. Verified against a live 2.0.32 server: it accepts
+ * an absolute path outside the project, so the token lands in
+ * `~/.config/opencode/push-device.json` where the plugin looks for it.
+ *
+ * It is deliberately best-effort. A server too old to have the endpoint, a phone
+ * with no Firebase project configured, or a transient network failure must all
+ * leave the app fully usable — push is an addition, not a dependency.
  */
 class PushTokenReporter(private val context: Context) {
 
@@ -51,10 +57,25 @@ class PushTokenReporter(private val context: Context) {
 
         runCatching {
             OpenCodeApi(connection, HttpClientFactory.create(connection))
-                .registerPushToken(token, platform = "android", appVersion = appVersion())
+                .writeServerFile(PUSH_DEVICE_FILE, payload(token))
         }.onSuccess {
             settings.markReported(connection.baseUrl)
         }
+    }
+
+    /**
+     * What the plugin reads.
+     *
+     * A single device, not a list: the file is rewritten on every report, and
+     * one install is one device. The plugin tolerates both shapes.
+     */
+    private fun payload(token: String): String = buildString {
+        append('{')
+        append("\"token\":\"").append(token.replace("\"", "")).append("\",")
+        append("\"platform\":\"android\",")
+        append("\"appVersion\":\"").append(appVersion().replace("\"", "")).append("\",")
+        append("\"reportedAt\":").append(System.currentTimeMillis())
+        append('}')
     }
 
     /**
@@ -80,4 +101,17 @@ class PushTokenReporter(private val context: Context) {
 
     /** Whether this build can receive push at all, for the settings screen. */
     fun available(): Boolean = FirebaseApp.getApps(context).isNotEmpty()
+
+    private companion object {
+        /**
+         * Where the plugin looks for the token.
+         *
+         * **Relative on purpose.** The app cannot know the server's home
+         * directory, and `~` is not expanded by the endpoint — verified against
+         * a live server, where it created a literal `~` folder inside the
+         * project. A relative path resolves to the project directory on every
+         * platform, and the plugin searches there first.
+         */
+        const val PUSH_DEVICE_FILE = ".opencode/push-device.json"
+    }
 }
