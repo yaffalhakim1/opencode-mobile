@@ -6,6 +6,8 @@ import dev.opencode.mobile.data.remote.OpenCodeApi
 import dev.opencode.mobile.data.settings.ConnectionStore
 import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Tells the OpenCode server which FCM token belongs to this device.
@@ -35,10 +37,27 @@ class PushTokenReporter(private val context: Context) {
      * treat null as "nothing to show", never as an error to surface.
      */
     suspend fun refreshAndReport(): String? {
-        val token = fetchToken() ?: return null
-        settings.saveToken(token)
-        report(token)
-        return token
+        logPush("refreshing the FCM token")
+        return try {
+            val token = fetchToken() ?: run {
+                logPush("no FCM token available")
+                return null
+            }
+            settings.saveToken(token)
+            report(token)
+            token
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            // A cancelled coroutine is the quietest failure of all: the timeout
+            // never fires, nothing is written, and the only trace is that the
+            // log simply stops. If this line appears, the caller's scope died
+            // mid-request — which is what a recomposition or an activity
+            // recreation does to a `LaunchedEffect`.
+            logPush("token request cancelled before it finished")
+            throw cancelled
+        } catch (error: Throwable) {
+            logPush("token request failed unexpectedly", error)
+            null
+        }
     }
 
     /** Re-reports the remembered token, without asking FCM for a new one. */
@@ -60,6 +79,12 @@ class PushTokenReporter(private val context: Context) {
                 .writeServerFile(PUSH_DEVICE_FILE, payload(token))
         }.onSuccess {
             settings.markReported(connection.baseUrl)
+            logPush("token reported to ${connection.baseUrl}")
+        }.onFailure {
+            // Worth logging: a token that never reached the server means the
+            // plugin has no device to send to, and the phone looks simply
+            // "not notified".
+            logPush("could not report the token to ${connection.baseUrl}", it)
         }
     }
 
@@ -87,12 +112,42 @@ class PushTokenReporter(private val context: Context) {
      * crash.
      */
     private suspend fun fetchToken(): String? {
-        if (FirebaseApp.getApps(context).isEmpty()) return null
-        return runCatching {
-            // Blocking, but this runs on an IO dispatcher and the alternative is
-            // another dependency just to bridge one Task.
-            com.google.android.gms.tasks.Tasks.await(FirebaseMessaging.getInstance().token)
-        }.getOrNull()
+        if (FirebaseApp.getApps(context).isEmpty()) {
+            logPush("no FirebaseApp: build has no google-services.json")
+            return null
+        }
+
+        return withContext(Dispatchers.IO) {
+            try {
+                val task = FirebaseMessaging.getInstance().token
+                // `Tasks.await(task, timeout, unit)` bounds the wait **inside**
+                // the Task API rather than relying on coroutine cancellation.
+                //
+                // That distinction matters: a plain `await(task)` blocks the
+                // thread, and coroutine cancellation only happens at suspension
+                // points, so `withTimeoutOrNull` cannot interrupt it. Two
+                // attempts at that hung silently. This form always returns —
+                // with a token, or with a TimeoutException.
+                val token = com.google.android.gms.tasks.Tasks.await(
+                    task,
+                    TOKEN_TIMEOUT_MS,
+                    java.util.concurrent.TimeUnit.MILLISECONDS,
+                )
+                if (token.isNullOrBlank()) {
+                    logPush("FCM returned an empty token")
+                    null
+                } else {
+                    logPush("got an FCM token (${token.length} chars)")
+                    token
+                }
+            } catch (timeout: java.util.concurrent.TimeoutException) {
+                logPush("no token after ${TOKEN_TIMEOUT_MS}ms", timeout)
+                null
+            } catch (error: Throwable) {
+                logPush("the token request failed", error)
+                null
+            }
+        }
     }
 
     private fun appVersion(): String = runCatching {
@@ -113,5 +168,8 @@ class PushTokenReporter(private val context: Context) {
          * platform, and the plugin searches there first.
          */
         const val PUSH_DEVICE_FILE = ".opencode/push-device.json"
+
+        /** How long to wait for Google Play Services to mint a token. */
+        const val TOKEN_TIMEOUT_MS = 15_000L
     }
 }

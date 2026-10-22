@@ -285,15 +285,17 @@ class OpenCodeApi(
     }
 
     /**
-     * Writes a file on the server, relative to the project directory.
+     * Writes a file on the server.
      *
      * Used to hand the FCM token to the server plugin, which reads it back.
      * This is OpenCode's own `POST /api/experimental/fs/write`; no endpoint was
      * added for push. It takes a **raw body**, not JSON — a JSON content type is
      * rejected with 415 — and creates missing parent directories.
      *
-     * `path` must be relative. An absolute path works but the app has no way to
-     * learn the server's home, and `~` is not expanded.
+     * A relative path resolves against the server's **default directory**, not
+     * the session's project. Verified on a live 2.0.32 server: a relative
+     * `.opencode/push-device.json` lands in the user's home. The plugin is
+     * written to look there.
      */
     suspend fun writeServerFile(path: String, content: String) {
         val body = content.toRequestBody(OCTET_STREAM)

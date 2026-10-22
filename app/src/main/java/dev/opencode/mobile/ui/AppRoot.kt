@@ -36,6 +36,7 @@ import dev.opencode.mobile.AppContainer
 import dev.opencode.mobile.core.deeplink.resolveSession
 import dev.opencode.mobile.core.net.HttpClientFactory
 import dev.opencode.mobile.core.net.ServerConnection
+import dev.opencode.mobile.core.push.logPush
 import dev.opencode.mobile.data.remote.EventStream
 import dev.opencode.mobile.data.remote.OpenCodeApi
 import dev.opencode.mobile.data.settings.ConnectionStore
@@ -134,6 +135,7 @@ fun AppRoot(
     LaunchedEffect(connection) {
         // Nothing to report to until there is a server.
         if (connection == null) return@LaunchedEffect
+        logPush("connected to ${connection?.baseUrl}; reporting push token")
         container.pushTokens.refreshAndReport()
 
         // Android 13+ only. Below that the permission does not exist and the
