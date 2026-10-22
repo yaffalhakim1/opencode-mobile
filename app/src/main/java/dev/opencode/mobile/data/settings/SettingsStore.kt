@@ -4,10 +4,12 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dev.opencode.mobile.ui.theme.ThemeFamily
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -56,11 +58,84 @@ class SettingsStore(private val context: Context) {
         }
     }
 
+    /**
+     * Whether the phone wants push notifications.
+     *
+     * On by default: someone who installed this app and paired a server is
+     * waiting on an agent, and being told when it blocks is the point. The
+     * switch exists so it can be turned off without revoking the system
+     * permission, which is a coarser tool.
+     */
+    val notificationsEnabled: Flow<Boolean> = context.settingsDataStore.data.map { preferences ->
+        preferences[NOTIFICATIONS_KEY] ?: true
+    }
+
+    suspend fun setNotificationsEnabled(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[NOTIFICATIONS_KEY] = enabled
+        }
+    }
+
+    /**
+     * The ntfy topic to subscribe to.
+     *
+     * Empty means push is not configured. The topic is the password: anyone who
+     * knows it can read these notifications and buzz the phone, so it is never
+     * defaulted or generated silently — the user pastes one in.
+     */
+    val ntfyTopic: Flow<String?> = context.settingsDataStore.data.map { preferences ->
+        preferences[NTFY_TOPIC_KEY]?.takeIf { it.isNotBlank() }
+    }
+
+    suspend fun setNtfyTopic(topic: String?) {
+        context.settingsDataStore.edit { preferences ->
+            val trimmed = topic?.trim().orEmpty()
+            if (trimmed.isEmpty()) preferences.remove(NTFY_TOPIC_KEY)
+            else preferences[NTFY_TOPIC_KEY] = trimmed
+        }
+    }
+
+    /** The ntfy server, for a self-hosted instance. Defaults to ntfy.sh. */
+    val ntfyServer: Flow<String> = context.settingsDataStore.data.map { preferences ->
+        preferences[NTFY_SERVER_KEY]?.takeIf { it.isNotBlank() } ?: DEFAULT_NTFY_SERVER
+    }
+
+    suspend fun setNtfyServer(server: String?) {
+        context.settingsDataStore.edit { preferences ->
+            val trimmed = server?.trim()?.trimEnd('/').orEmpty()
+            if (trimmed.isEmpty()) preferences.remove(NTFY_SERVER_KEY)
+            else preferences[NTFY_SERVER_KEY] = trimmed
+        }
+    }
+
+    /**
+     * Everything the push service needs, or null when it should not run.
+     *
+     * Read as one value rather than three flows: the service starts and stops on
+     * this answer, and a torn read could start it with a topic but no server.
+     */
+    suspend fun ntfyConfig(): NtfyConfig? {
+        val preferences = context.settingsDataStore.data.first()
+        if (preferences[NOTIFICATIONS_KEY] == false) return null
+        val topic = preferences[NTFY_TOPIC_KEY]?.takeIf { it.isNotBlank() } ?: return null
+        val server = preferences[NTFY_SERVER_KEY]?.takeIf { it.isNotBlank() } ?: DEFAULT_NTFY_SERVER
+        return NtfyConfig(server.trimEnd('/'), topic)
+    }
+
     private companion object {
         val THEME_KEY = stringPreferencesKey("theme")
         val FAMILY_KEY = stringPreferencesKey("theme_family")
+        val NOTIFICATIONS_KEY = booleanPreferencesKey("notifications_enabled")
+        val NTFY_TOPIC_KEY = stringPreferencesKey("ntfy_topic")
+        val NTFY_SERVER_KEY = stringPreferencesKey("ntfy_server")
     }
 }
+
+/** Where to subscribe, and to what. */
+data class NtfyConfig(val server: String, val topic: String)
+
+/** The public instance. Self-hosting is a setting, not a requirement. */
+const val DEFAULT_NTFY_SERVER = "https://ntfy.sh"
 
 /** What the user picked: follow the phone, or pin it. */
 enum class ThemeChoice(val stored: String) {

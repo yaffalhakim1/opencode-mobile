@@ -1,10 +1,17 @@
 # Push notifications — plan
 
-**Decision:** ntfy transport + an OpenCode server plugin. Events: `permission.asked`
-and `session.execution.failed`. Total cost: **$0**.
+**Decision:** in-app ntfy receiver. The app subscribes to an ntfy topic itself,
+so no second app is installed. The cost is one quiet foreground-service entry in
+the notification shade.
 
-Status: planned, not implemented.
+Status: implemented. See `docs/PUSH_NTFY.md` for the transport contract and
+`implementation_plan.md` for the build order.
 
+> **History.** This started as "ntfy app receives", which needed no Kotlin but
+> installed a second app. The foreground-service route was chosen instead so the
+> notification carries this app's icon and channels. FCM is the other option
+> (no ongoing notification, but a Firebase project, a service-account key and a
+> hard requirement on Play Services).
 ---
 
 ## Why not the obvious approaches
@@ -180,3 +187,4 @@ Only if the second app annoys you. Two routes:
 2. **Where does the topic live on the phone** — typed into settings, or scanned from
    the same pairing QR? The QR already carries host + token, so a second field is a
    step backwards.
+

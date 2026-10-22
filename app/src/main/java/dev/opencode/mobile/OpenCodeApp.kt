@@ -5,6 +5,8 @@ import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import dev.opencode.mobile.core.push.NotificationChannels
+import dev.opencode.mobile.core.push.PushNotifier
 import dev.opencode.mobile.data.settings.ConnectionStore
 import dev.opencode.mobile.data.settings.SettingsStore
 import okhttp3.OkHttpClient
@@ -18,6 +20,9 @@ class OpenCodeApp : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        // Channels must exist before the first notification is posted, and
+        // creating them is idempotent, so this is the simplest correct place.
+        NotificationChannels.create(this)
     }
 
     /**
@@ -52,4 +57,7 @@ class AppContainer(application: Application) {
 
     /** Application context for content resolvers (file attachments). */
     val appContext: android.content.Context = application
+
+    /** Posts the app's own notifications. */
+    val pushNotifier: PushNotifier = PushNotifier(application)
 }

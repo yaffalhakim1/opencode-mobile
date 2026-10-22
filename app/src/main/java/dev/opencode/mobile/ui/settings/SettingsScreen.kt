@@ -159,6 +159,15 @@ fun SettingsScreen(
                 onSelect = viewModel::setFamily,
             )
 
+            NotificationsSection(
+                state = state,
+                onToggle = viewModel::setNotificationsEnabled,
+                onTopicChange = viewModel::setTopic,
+                onServerChange = viewModel::setServer,
+                onSendTest = viewModel::sendTest,
+                onReconnect = viewModel::reconnect,
+            )
+
             Spacer(Modifier.height(24.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             Spacer(Modifier.height(16.dp))

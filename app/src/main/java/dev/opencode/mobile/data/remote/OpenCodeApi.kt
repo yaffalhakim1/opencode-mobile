@@ -85,6 +85,18 @@ class OpenCodeApi(
         }
     }
 
+    /**
+     * One session by id.
+     *
+     * A notification carries nothing but a session id, so this is what turns a
+     * tapped notification back into the title, agent, model and directory the
+     * chat screen needs. `GET /api/session/:id` wraps the session in `data`.
+     */
+    suspend fun session(sessionID: String): SessionDto =
+        get("api/session/$sessionID") { body ->
+            json.decodeFromString(DataEnvelope.serializer(SessionDto.serializer()), body).data
+        }
+
     suspend fun createSession(title: String? = null, directory: String? = null): SessionDto {
         val payload = buildJsonObject {
             if (!title.isNullOrBlank()) put("title", title)

@@ -1,6 +1,11 @@
 package dev.opencode.mobile.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -21,11 +26,16 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.opencode.mobile.AppContainer
+import dev.opencode.mobile.core.deeplink.resolveSession
 import dev.opencode.mobile.core.net.HttpClientFactory
 import dev.opencode.mobile.core.net.ServerConnection
+import dev.opencode.mobile.core.push.PushService
 import dev.opencode.mobile.data.remote.EventStream
 import dev.opencode.mobile.data.remote.OpenCodeApi
 import dev.opencode.mobile.data.settings.ConnectionStore
@@ -39,6 +49,8 @@ import dev.opencode.mobile.ui.sessions.SessionListScreen
 import dev.opencode.mobile.ui.sessions.SessionListViewModel
 import dev.opencode.mobile.ui.settings.SettingsScreen
 import dev.opencode.mobile.ui.settings.SettingsViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import okhttp3.Credentials
 
@@ -68,11 +80,23 @@ fun AppRoot(
     connectionStore: ConnectionStore,
     settingsStore: SettingsStore,
     appContext: android.content.Context,
+    /** The app's dependency graph, so the push collaborators are shared. */
+    container: AppContainer,
+    /**
+     * A session a notification asked to open.
+     *
+     * It arrives before the saved connection has been read, so it is held here
+     * until there is a server to resolve it against. Resolving it in the
+     * activity would mean either blocking the main thread or dropping the tap on
+     * a cold start.
+     */
+    requestedSession: StateFlow<String?> = remember { MutableStateFlow<String?>(null) },
 ) {
     var connection by remember { mutableStateOf<ServerConnection?>(null) }
     var route by rememberSaveable(stateSaver = RouteSaver) { mutableStateOf<Route>(Route.Connect) }
     var ready by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val requested by requestedSession.collectAsStateWithLifecycle()
 
     // Restore the saved connection once, so a relaunch lands on the session list.
     LaunchedEffect(connectionStore) {
@@ -82,6 +106,72 @@ fun AppRoot(
             route = Route.Sessions
         }
         ready = true
+    }
+
+    /*
+     * Push is set up after the first successful connection, not on launch.
+     *
+     * Asking for POST_NOTIFICATIONS on a cold start is the pattern that trains
+     * people to refuse: the request arrives before the app has done anything
+     * for them. By this point the user has paired a server and seen a session
+     * list, so "tell me when the agent is blocked" is a request that makes
+     * sense. A refusal is not an error — the app works, quietly.
+     */
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) startPushService(appContext)
+    }
+
+    LaunchedEffect(connection) {
+        // Nothing to watch for until there is a server.
+        if (connection == null) return@LaunchedEffect
+
+        // Android 13+ only. Below that the permission does not exist and the
+        // system grants notifications outright.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val granted = ContextCompat.checkSelfPermission(
+                appContext,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!granted) {
+                launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                return@LaunchedEffect
+            }
+        }
+        startPushService(appContext)
+    }
+
+    /*
+     * A tapped notification, resolved once there is a server to ask.
+     *
+     * The link only carries an id, so the title, agent, model and directory come
+     * from the session itself. If the session is gone — deleted, or on a server
+     * this phone is no longer connected to — the tap lands on the session list
+     * rather than a broken chat screen.
+     */
+    LaunchedEffect(requested, connection) {
+        val sessionID = requested ?: return@LaunchedEffect
+        val active = connection ?: return@LaunchedEffect
+        val target = resolveSession(
+            api = OpenCodeApi(active, HttpClientFactory.create(active)),
+            sessionID = sessionID,
+        )
+        route = if (target != null) {
+            Route.Chat(
+                sessionID = target.sessionID,
+                title = target.title,
+                agent = target.agent,
+                modelKey = target.modelKey,
+                directory = target.directory,
+            )
+        } else {
+            Route.Sessions
+        }
+        // Cleared so a rotation does not re-open the chat and discard wherever
+        // the user navigated to afterwards. The flow is mutable at the call
+        // site; the parameter is typed as `StateFlow` so this is a cast.
+        (requestedSession as? MutableStateFlow<String?>)?.value = null
     }
 
     if (!ready) {
@@ -174,7 +264,7 @@ fun AppRoot(
             }
 
             Route.Settings -> SettingsScreen(
-                viewModel = viewModel(factory = settingsFactory(connectionStore, settingsStore)),
+                viewModel = viewModel(factory = settingsFactory(connectionStore, settingsStore, container)),
                 onBack = { route = Route.Sessions },
                 onDisconnected = {
                     connection = null
@@ -183,6 +273,19 @@ fun AppRoot(
             )
         }
     }
+}
+
+/**
+ * Starts the push service.
+ *
+ * The service re-reads the topic and the enabled flag itself and stops
+ * immediately when either says not to run, so there is nothing to check here.
+ * A platform refusal (background start restrictions, or a notification
+ * permission the user denied) is swallowed inside `start`: push is an addition
+ * to this app, not a dependency.
+ */
+private fun startPushService(context: android.content.Context) {
+    PushService.start(context)
 }
 
 /** Depth drives the transition direction: deeper routes slide in from the end. */
@@ -261,8 +364,9 @@ private fun chatFactory(
 private fun settingsFactory(
     store: ConnectionStore,
     settings: SettingsStore,
+    container: AppContainer,
 ) = viewModelFactory {
-    SettingsViewModel(store, settings)
+    SettingsViewModel(store, settings, container.pushNotifier, container.appContext)
 }
 
 /** Small helper so each factory stays a one-liner without boilerplate classes. */
