@@ -28,6 +28,21 @@ Thumbs.db
 keystore/
 keystore.properties
 
+# Push notifications
+#
+# google-services.json identifies a Firebase project and is not meant to be
+# shared; it is per-project configuration, not source. The build skips the
+# google-services plugin when it is absent, so a fresh checkout still compiles.
+app/google-services.json
+#
+# The FCM token this device reported to the server, written by the app through
+# /api/experimental/fs/write. It is a live push credential for one phone.
+.opencode/push-device.json
+#
+# A Firebase service-account private key, if one is ever placed in the tree for
+# testing. It can send push to every device in the project.
+*-service-account.json
+
 # Tools
 #
 # The theme generator in tools/theme-gen is committed, because the generated

@@ -85,6 +85,18 @@ class OpenCodeApi(
         }
     }
 
+    /**
+     * One session by id.
+     *
+     * A notification carries nothing but a session id, so this is what turns a
+     * tapped notification back into the title, agent, model and directory the
+     * chat screen needs. `GET /api/session/:id` wraps the session in `data`.
+     */
+    suspend fun session(sessionID: String): SessionDto =
+        get("api/session/$sessionID") { body ->
+            json.decodeFromString(DataEnvelope.serializer(SessionDto.serializer()), body).data
+        }
+
     suspend fun createSession(title: String? = null, directory: String? = null): SessionDto {
         val payload = buildJsonObject {
             if (!title.isNullOrBlank()) put("title", title)
@@ -273,6 +285,28 @@ class OpenCodeApi(
     }
 
     /**
+     * Writes a file on the server.
+     *
+     * Used to hand the FCM token to the server plugin, which reads it back.
+     * This is OpenCode's own `POST /api/experimental/fs/write`; no endpoint was
+     * added for push. It takes a **raw body**, not JSON — a JSON content type is
+     * rejected with 415 — and creates missing parent directories.
+     *
+     * A relative path resolves against the server's **default directory**, not
+     * the session's project. Verified on a live 2.0.32 server: a relative
+     * `.opencode/push-device.json` lands in the user's home. The plugin is
+     * written to look there.
+     */
+    suspend fun writeServerFile(path: String, content: String) {
+        val body = content.toRequestBody(OCTET_STREAM)
+        val url = "${connection.baseUrl}/api/experimental/fs/write".toHttpUrl().newBuilder()
+            .addQueryParameter("path", path)
+            .build()
+        val request = Request.Builder().url(url).post(body).build()
+        execute(request) { }
+    }
+
+    /**
      * Permission requests the agent is blocked on.
      *
      * Like a form, this is a request the server holds open, not a message.
@@ -392,6 +426,11 @@ class OpenCodeApi(
 
     companion object {
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
+
+        /**
+         * `fs/write` rejects JSON with 415; it wants an opaque body.
+         */
+        private val OCTET_STREAM = "application/octet-stream".toMediaType()
 
         /**
          * Lenient by design: experimental endpoints add fields without warning,

@@ -19,4 +19,10 @@
 # picks a network client by the platform it finds. R8 cannot see either.
 -keep class coil3.** { *; }
 -dontwarn coil3.**
+
+# FCM instantiates the service and its token listeners reflectively from the
+# manifest and the FirebaseApp registry, so R8 cannot see the references.
+-keep class dev.opencode.mobile.core.push.PushService { *; }
+-keep class com.google.firebase.messaging.** { *; }
+-dontwarn com.google.firebase.**
 -keepattributes Signature
