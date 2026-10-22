@@ -3,6 +3,10 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    // Applied conditionally below: the plugin fails the build outright when
+    // google-services.json is missing, and that would break every checkout
+    // without a Firebase project, including CI and unit tests.
+    alias(libs.plugins.google.services) apply false
 }
 
 import org.gradle.api.GradleException
@@ -41,6 +45,16 @@ val storeFilePath = keystoreProperties.getProperty("storeFile")
 val hasSigningMaterial = !keystoreProperties.isEmpty() &&
     storeFilePath != null &&
     rootProject.file(storeFilePath).exists()
+
+// Firebase configuration is optional. The google-services plugin throws when
+// google-services.json is absent, which would fail a build on any machine
+// without a Firebase project — including CI, which only needs to compile and
+// test. Without the file the app still builds; push registration simply
+// reports itself as unavailable at runtime.
+val hasFirebaseConfig = file("google-services.json").exists()
+if (hasFirebaseConfig) {
+    apply(plugin = libs.plugins.google.services.get().pluginId)
+}
 
 // An unsigned release APK builds fine and installs on nobody's phone, so the
 // build stops here instead. Debug and test tasks are unaffected: they do not
@@ -146,6 +160,12 @@ dependencies {
 
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+
+    // Push. `firebase-messaging` is a real dependency even when no Firebase
+    // project is configured: FirebaseMessaging.getInstance() then reports that
+    // it is not available, which the app surfaces instead of crashing.
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
 
     testImplementation(libs.junit)
 }

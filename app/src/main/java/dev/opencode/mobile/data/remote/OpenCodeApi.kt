@@ -85,6 +85,18 @@ class OpenCodeApi(
         }
     }
 
+    /**
+     * One session by id.
+     *
+     * A notification carries nothing but a session id, so this is what turns a
+     * tapped notification back into the title, agent, model and directory the
+     * chat screen needs. `GET /api/session/:id` wraps the session in `data`.
+     */
+    suspend fun session(sessionID: String): SessionDto =
+        get("api/session/$sessionID") { body ->
+            json.decodeFromString(DataEnvelope.serializer(SessionDto.serializer()), body).data
+        }
+
     suspend fun createSession(title: String? = null, directory: String? = null): SessionDto {
         val payload = buildJsonObject {
             if (!title.isNullOrBlank()) put("title", title)
@@ -270,6 +282,28 @@ class OpenCodeApi(
 
     suspend fun deleteSession(sessionID: String) {
         delete("api/session/$sessionID")
+    }
+
+    /**
+     * Tells the server which push token belongs to this device.
+     *
+     * FCM can reach the phone, but the server has no way to know *which* phone
+     * to reach, so the app reports it. The endpoint is an app-side addition —
+     * see `docs/PUSH_SERVER.md` — and a server that predates it answers 404,
+     * which callers treat as "push unavailable" rather than an error worth
+     * showing.
+     */
+    suspend fun registerPushToken(
+        token: String,
+        platform: String = "android",
+        appVersion: String = "",
+    ) {
+        val payload = buildJsonObject {
+            put("token", token)
+            put("platform", platform)
+            if (appVersion.isNotBlank()) put("appVersion", appVersion)
+        }
+        post("api/push/token", payload) { }
     }
 
     /**

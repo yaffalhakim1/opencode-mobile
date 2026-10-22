@@ -1,9 +1,19 @@
 # Push notifications — plan
 
-**Decision:** ntfy transport + an OpenCode server plugin. Events: `permission.asked`
-and `session.execution.failed`. Total cost: **$0**.
+**Decision:** FCM direct. The server plugin posts one FCM **data** message per
+blocking event, straight to the phone. No second app, no persistent notification,
+no foreground service.
 
-Status: planned, not implemented.
+Status: app side and plugin implemented; needs a Firebase project and the server
+endpoint (`docs/PUSH_SERVER.md`) to deliver end to end. See
+`implementation_plan.md` for the build order.
+
+> **History.** This started as an ntfy-relay plan. ntfy was chosen because the
+> phone is behind NAT and something reachable by both sides is required — but
+> FCM is also such a thing, and it removes the second app and the foreground
+> service entirely. The cost is a Firebase project, a service-account key, and a
+> hard requirement on Google Play Services. `plugins/notify.mjs` (ntfy) is kept
+> as a zero-config fallback.
 
 ---
 
@@ -45,11 +55,13 @@ opencode server
 
 ---
 
-## Phase 0 — server plugin (no Kotlin)
+## Phase 0 — server plugin (no Kotlin) — **DONE**
 
-Validates the whole idea before any app work. **Do this first.**
+Validated the whole idea before any app work.
 
-File: `~/.config/opencode/plugins/notify.js`
+File: `~/.config/opencode/plugins/notify.mjs` (`.mjs`, not `.js`: the extension is
+what tells Bun the file is an ES module, which is also how the other local
+plugin in this config is named).
 
 ```js
 export const NotifyPlugin = async () => ({
@@ -67,18 +79,25 @@ export const NotifyPlugin = async () => ({
 })
 ```
 
-**Verified against the schema, not the docs.** The published docs list `session.error`;
-that event **does not exist** in this version. The real one is
-`session.execution.failed`, whose `data` is `{ sessionID, error: { type, message,
-status?, response?, retryAfterMs? } }`. A plugin subscribing to `session.error` would
-compile, run, and never fire.
+**Verified against a live server and the installed binary** (OpenCode 2.0.32),
+not the docs. Corrections to the original notes:
+
+- `session.error` **does** exist, but it fires for errors that do not end a turn,
+  so it is noise. `session.execution.failed` is the right one — `data` is
+  `{ sessionID, error: { type, message, status?, response? } }`.
+- `form.created` is the third event worth notifying on. A `question` tool call
+  blocks the turn exactly like a permission does, and the original plan missed it.
+- No token and no account are needed. ntfy.sh's free tier allows 250 messages a
+  day; a turn produces a handful. Paid plans only add *reserved topic names*,
+  which an unreserved random topic makes unnecessary.
 
 Note `data.sessionID` only — **no session title**. The app resolves the title locally
 from its session list, which it already has.
 
 Config:
-- `NTFY_TOPIC` and `NTFY_TOKEN` from env, **never committed**
-- Self-hosted ntfy, or `ntfy.sh` with an access token
+- `NTFY_TOPIC` from env, **never committed** (no token: not needed)
+- `NTFY_SERVER` optional, defaults to `https://ntfy.sh`
+- Self-hosting is optional and not being done
 
 ### Security, non-negotiable
 
@@ -175,8 +194,9 @@ Only if the second app annoys you. Two routes:
 
 ## Open questions
 
-1. **Self-host ntfy, or `ntfy.sh`?** Self-hosted is free and private; `ntfy.sh` needs
-   a token and trusts a third party with your file paths.
+1. ~~**Self-host ntfy, or `ntfy.sh`?**~~ **Answered: `ntfy.sh`, free tier, no
+   account.** Self-hosting is optional and explicitly not being done.
 2. **Where does the topic live on the phone** — typed into settings, or scanned from
    the same pairing QR? The QR already carries host + token, so a second field is a
-   step backwards.
+   step backwards. Still open, but it only matters for the in-app receiver: with the
+   ntfy app the topic is typed there once, and OpenCode Mobile needs nothing.

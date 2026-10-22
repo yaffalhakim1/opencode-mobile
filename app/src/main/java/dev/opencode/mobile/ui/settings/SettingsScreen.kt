@@ -163,6 +163,17 @@ fun SettingsScreen(
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             Spacer(Modifier.height(16.dp))
 
+            NotificationsSection(
+                state = state,
+                onToggle = viewModel::setNotificationsEnabled,
+                onSendTest = viewModel::sendTest,
+                onRefreshToken = viewModel::refreshToken,
+            )
+
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            Spacer(Modifier.height(16.dp))
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

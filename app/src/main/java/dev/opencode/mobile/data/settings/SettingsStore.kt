@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dev.opencode.mobile.ui.theme.ThemeFamily
@@ -56,9 +57,71 @@ class SettingsStore(private val context: Context) {
         }
     }
 
+    /**
+     * Whether the phone wants push notifications.
+     *
+     * On by default: someone who installed this app and paired a server is
+     * waiting on an agent, and being told when it blocks is the point. The
+     * switch exists so it can be turned off without revoking the system
+     * permission, which is a coarser tool.
+     */
+    val notificationsEnabled: Flow<Boolean> = context.settingsDataStore.data.map { preferences ->
+        preferences[NOTIFICATIONS_KEY] ?: true
+    }
+
+    suspend fun setNotificationsEnabled(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[NOTIFICATIONS_KEY] = enabled
+        }
+    }
+
+    /**
+     * The FCM registration token this install was given.
+     *
+     * Stored so it can be shown, re-sent, and compared against a refreshed one
+     * — a token that silently rotated is the classic reason a notification
+     * "stopped working" with nothing in the UI to explain it.
+     */
+    val pushToken: Flow<String?> = context.settingsDataStore.data.map { preferences ->
+        preferences[PUSH_TOKEN_KEY]
+    }
+
+    suspend fun setPushToken(token: String?) {
+        context.settingsDataStore.edit { preferences ->
+            if (token.isNullOrBlank()) {
+                preferences.remove(PUSH_TOKEN_KEY)
+            } else {
+                preferences[PUSH_TOKEN_KEY] = token
+            }
+        }
+    }
+
+    /**
+     * The server that acknowledged [pushToken].
+     *
+     * Per server, not global: the phone can be paired to a different OpenCode
+     * instance later, and that server has never been told this device exists.
+     */
+    val pushTokenReportedTo: Flow<String?> = context.settingsDataStore.data.map { preferences ->
+        preferences[PUSH_REPORTED_KEY]
+    }
+
+    suspend fun setPushTokenReportedTo(server: String?) {
+        context.settingsDataStore.edit { preferences ->
+            if (server.isNullOrBlank()) {
+                preferences.remove(PUSH_REPORTED_KEY)
+            } else {
+                preferences[PUSH_REPORTED_KEY] = server
+            }
+        }
+    }
+
     private companion object {
         val THEME_KEY = stringPreferencesKey("theme")
         val FAMILY_KEY = stringPreferencesKey("theme_family")
+        val NOTIFICATIONS_KEY = booleanPreferencesKey("notifications_enabled")
+        val PUSH_TOKEN_KEY = stringPreferencesKey("push_token")
+        val PUSH_REPORTED_KEY = stringPreferencesKey("push_token_reported_to")
     }
 }
 
