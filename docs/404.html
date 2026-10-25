@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Page not found: OpenCode Mobile</title>
+<meta name="description" content="That page does not exist. The OpenCode Mobile landing page is one click away." />
+<meta name="robots" content="noindex, follow" />
+<meta name="theme-color" id="theme-color" content="#181818" />
+<meta name="color-scheme" content="dark light" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23181818'/%3E%3Cpath d='M7 8h10v8H7z M9.5 10.5l2 1.5-2 1.5 M13.5 13.5h2.5' stroke='%2326E085' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400..500&display=swap" />
+<script>
+  (function () {
+    var root = document.documentElement;
+    var theme = 'dark';
+    try {
+      var stored = localStorage.getItem('ocm-theme');
+      if (stored === 'light' || stored === 'dark') {
+        theme = stored;
+      } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+        theme = 'light';
+      }
+    } catch (e) { /* storage blocked */ }
+    root.setAttribute('data-theme', theme);
+    var meta = document.getElementById('theme-color');
+    if (meta) meta.setAttribute('content', theme === 'light' ? '#F7FBF8' : '#181818');
+  })();
+</script>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg:        #181818;  --bg:        light-dark(#F7FBF8, #181818);
+    --bg-soft:   #1F1F1F;  --bg-soft:   light-dark(#FFFFFF, #1F1F1F);
+    --bg-raise:  #272727;  --bg-raise:  light-dark(#EFF4F0, #272727);
+    --line:      #313131;  --line:      light-dark(#C0C9C2, #313131);
+    --line-soft: #272727;  --line-soft: light-dark(#DCE5DE, #272727);
+    --fg:        #F2F2F2;  --fg:        light-dark(#171D19, #F2F2F2);
+    --fg-dim:    #A9A9A9;  --fg-dim:    light-dark(#404943, #A9A9A9);
+    --fg-faint:  #7C7C7C;  --fg-faint:  light-dark(#5F6A63, #7C7C7C);
+    --brand:     #26E085;  --brand:     light-dark(#00794A, #26E085);
+    --brand-mark:#26E085;  --brand-mark:light-dark(#00DA7D, #26E085);
+    --brand-ink: #042315;  --brand-ink: light-dark(#FFFFFF, #042315);
+    --s-75: 8px; --s-100: 12px; --s-200: 16px; --s-300: 24px;
+    --s-400: 32px; --s-500: 40px; --s-600: 48px;
+    --r-sm: 4px; --r-lg: 8px; --r-2xl: 16px; --r-full: 9999px;
+    --ease: cubic-bezier(0.32, 0.72, 0, 1);
+    --sans: "Geist", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  :root[data-theme="light"] { color-scheme: light; }
+  :root[data-theme="dark"] { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: var(--s-300);
+    background: var(--bg);
+    color: var(--fg);
+    font: 400 16px/24px var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  main { width: 100%; max-width: 480px; }
+  .card {
+    padding: var(--s-400);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-2xl);
+    background: var(--bg-soft);
+  }
+  .mark { color: var(--brand-mark); display: block; margin-bottom: var(--s-300); }
+  .code {
+    font: 500 12px/16px var(--mono);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+  }
+  h1 {
+    font-size: 30px; line-height: 36px; font-weight: 600; letter-spacing: -0.02em;
+    margin: var(--s-100) 0 var(--s-200); text-wrap: balance;
+  }
+  p { margin: 0 0 var(--s-300); color: var(--fg-dim); text-wrap: pretty; }
+  code { font: 400 14px/20px var(--mono); color: var(--fg); }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-200); }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: var(--s-75);
+    padding: var(--s-75) var(--s-100);
+    border-radius: var(--r-lg);
+    background: var(--brand);
+    color: var(--brand-ink);
+    font-size: 16px; line-height: 24px; font-weight: 600;
+    text-decoration: none;
+    transition: background 200ms var(--ease), transform 140ms var(--ease);
+  }
+  .btn:hover { background: color-mix(in oklab, var(--brand) 88%, white); }
+  .btn:active { transform: scale(.98); }
+  .quiet {
+    font-size: 14px; line-height: 20px; color: var(--fg-dim);
+    text-decoration: none; border-bottom: 1px solid var(--line); padding-bottom: 2px;
+    transition: color 140ms var(--ease), border-color 140ms var(--ease);
+  }
+  .quiet:hover { color: var(--fg); border-color: var(--fg); }
+  :focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: var(--r-sm); }
+</style>
+</head>
+<body>
+
+<main>
+  <div class="card">
+    <svg class="mark" width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="2" y="3" width="20" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="1.7"/>
+      <path d="M7 9l3 2.5L7 14M12.5 14h4" fill="none" stroke="currentColor" stroke-width="1.7"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+
+    <span class="code">404</span>
+    <h1>This path is not in the project.</h1>
+    <p>
+      Nothing is broken on your end. The page moved, or the link was typed with
+      one character too many.
+    </p>
+
+    <div class="row">
+      <a class="btn" href="/opencode-mobile/">Back to the page</a>
+      <a class="quiet" href="https://github.com/yaffalhakim1/opencode-mobile">Source on GitHub</a>
+    </div>
+  </div>
+</main>
+
+</body>
+</html>

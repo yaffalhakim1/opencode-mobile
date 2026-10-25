@@ -1,39 +1,41 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="no-js">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
-<title>OpenCode Mobile: a native Android client for your self-hosted agent</title>
-<meta name="description" content="OpenCode Mobile is a native Android client for a self-hosted OpenCode server. Stream replies, answer the agent's questions, and review tool calls from your phone. Your machine does the work; nothing leaves your network." />
+<title>OpenCode Mobile: your agent, from the sofa</title>
+<meta name="description" content="The native Android client for the OpenCode server on your own machine. Watch the answer stream in, answer a blocking question, approve a file edit. 24 MB signed APK, no account, no analytics." />
 <link rel="canonical" href="https://yaffalhakim1.github.io/opencode-mobile/" />
-<meta name="theme-color" id="theme-color" content="#0B0F0C" />
+<meta name="theme-color" id="theme-color" content="#181818" />
 <meta name="color-scheme" content="dark light" />
 
 <meta property="og:type" content="website" />
-<meta property="og:title" content="OpenCode Mobile: a native Android client for your self-hosted agent" />
-<meta property="og:description" content="Stream replies, answer the agent's questions, and review tool calls from your phone. Your machine does the work." />
+<meta property="og:title" content="OpenCode Mobile: your agent, from the sofa" />
+<meta property="og:description" content="The native Android client for the OpenCode server on your own machine. Watch the answer stream in, answer a blocking question, approve a file edit." />
 <meta property="og:url" content="https://yaffalhakim1.github.io/opencode-mobile/" />
 <meta property="og:image" content="https://yaffalhakim1.github.io/opencode-mobile/screens/chat.png" />
-<meta property="og:image:alt" content="The OpenCode Mobile chat screen showing a streamed answer with tool cards" />
+<meta property="og:image:alt" content="The OpenCode Mobile chat screen showing a streamed answer with reasoning and tool cards" />
 <meta property="og:site_name" content="OpenCode Mobile" />
 
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="OpenCode Mobile" />
-<meta name="twitter:description" content="A native Android client for your self-hosted OpenCode agent." />
+<meta name="twitter:title" content="OpenCode Mobile: your agent, from the sofa" />
+<meta name="twitter:description" content="The native Android client for the OpenCode server on your own machine." />
 <meta name="twitter:image" content="https://yaffalhakim1.github.io/opencode-mobile/screens/chat.png" />
 
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230B0F0C'/%3E%3Cpath d='M7 8h10v8H7z M9.5 10.5l2 1.5-2 1.5 M13.5 13.5h2.5' stroke='%2326E085' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23181818'/%3E%3Cpath d='M7 8h10v8H7z M9.5 10.5l2 1.5-2 1.5 M13.5 13.5h2.5' stroke='%2326E085' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400..500&display=swap" />
 
 <script>
-  // Set the theme before the first paint, so a light-mode reader never sees a
-  // dark flash. The choice is remembered; without one, the system decides.
+  // Theme and the js flag are set before first paint: a light mode reader never
+  // sees a dark flash, and the reveal animations only hide content when there
+  // is a script around to show it again.
   (function () {
     var root = document.documentElement;
+    root.className = 'js';
     var theme = 'dark';
     try {
       var stored = localStorage.getItem('ocm-theme');
@@ -45,7 +47,7 @@
     } catch (e) { /* storage blocked: fall through to the system preference */ }
     root.setAttribute('data-theme', theme);
     var meta = document.getElementById('theme-color');
-    if (meta) meta.setAttribute('content', theme === 'light' ? '#F7FBF8' : '#0B0F0C');
+    if (meta) meta.setAttribute('content', theme === 'light' ? '#F7FBF8' : '#181818');
   })();
 </script>
 
@@ -56,444 +58,875 @@
   "name": "OpenCode Mobile",
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": "Android 8.0+",
-  "description": "A native Android client for a self-hosted OpenCode server. Stream replies, answer the agent's questions, and review tool calls from your phone.",
+  "description": "A native Android client for a self hosted OpenCode server. Stream replies, answer the agent's questions, and review tool calls from your phone.",
   "url": "https://yaffalhakim1.github.io/opencode-mobile/",
   "downloadUrl": "https://github.com/yaffalhakim1/opencode-mobile/releases/latest",
-  "softwareVersion": "1.0.8",
-  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-  "license": "https://github.com/yaffalhakim1/opencode-mobile"
+  "softwareVersion": "1.0.14",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    { "@type": "Question", "name": "Do I need a server running already?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. OpenCode Mobile is a client. It talks to an OpenCode server you run yourself, on a laptop, a desktop or a home machine. Start it with opencode serve and the app has something to connect to." } },
+    { "@type": "Question", "name": "Does it work away from my home network?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes, if you expose the server yourself through a tunnel. The app only ever talks to the host you give it, so a tunnel or a VPN is the whole story. Nothing is relayed through us." } },
+    { "@type": "Question", "name": "Where does the server password go?",
+      "acceptedAnswer": { "@type": "Answer", "text": "It is sealed with AES-256-GCM using a key that lives in the Android keystore and never leaves it. The sealed value sits in app storage, and the password is only sent to your own server as Basic auth over the connection." } },
+    { "@type": "Question", "name": "Is there a Play Store version?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No. Every release publishes a signed APK on the Releases page and you sideload it. That keeps the distribution in your hands and avoids a store listing for an app that is only useful if you run the server." } },
+    { "@type": "Question", "name": "Why will the new APK not install over the old one?",
+      "acceptedAnswer": { "@type": "Answer", "text": "The signing key was rotated at 1.0.7, so builds before that are signed with a different certificate and Android refuses the update. Uninstall the old app once, then install normally." } },
+    { "@type": "Question", "name": "Which Android versions are supported?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Android 8.0 (API 26) and newer. The app is built with Kotlin and Jetpack Compose, targeting API 36." } },
+    { "@type": "Question", "name": "Does it send telemetry?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No analytics SDK, no crash reporting, no account, no push service. The only network traffic is to the server you configured." } },
+    { "@type": "Question", "name": "What happens when the connection drops?",
+      "acceptedAnswer": { "@type": "Answer", "text": "The event feed is live only, so the client does not try to repair a gap. It applies the deltas it has, then refetches the message history when the turn ends or the stream reconnects." } }
+  ]
 }
 </script>
 
 <style>
+  /*
+   * Every value here resolves through the design system: spacing from the 8px
+   * grid, type from the Tailwind scale, radii from the Tailwind radius scale.
+   * Nothing is invented per component.
+   */
   :root {
     color-scheme: light dark;
 
-    /*
-     * Every colour is the app's own palette, so the site and the app are one
-     * product. Dark is listed first as the fallback for browsers without
-     * light-dark(); the second declaration wins where it is supported, and
-     * color-scheme above decides which side of it is used.
-     */
-    --bg:         #0B0F0C;
-    --bg:         light-dark(#F7FBF8, #0B0F0C);
-    --bg-soft:    #11170F;
-    --bg-soft:    light-dark(#FFFFFF, #11170F);
-    --bg-raise:   #141A16;
-    --bg-raise:   light-dark(#EFF4F0, #141A16);
-    --line:       #2A332D;
-    --line:       light-dark(#C0C9C2, #2A332D);
-    --line-soft:  #1C241F;
-    --line-soft:  light-dark(#DCE5DE, #1C241F);
-    --fg:         #DFE5E0;
-    --fg:         light-dark(#171D19, #DFE5E0);
-    --fg-dim:     #B4C2B8;
-    --fg-dim:     light-dark(#404943, #B4C2B8);
-    --fg-faint:   #83938A;
-    --fg-faint:   light-dark(#5F6A63, #83938A);
+    /* Dark is the fallback for browsers without light-dark(). */
+    --bg:          #181818;
+    --bg:          light-dark(#F7FBF8, #181818);
+    --bg-soft:     #1F1F1F;
+    --bg-soft:     light-dark(#FFFFFF, #1F1F1F);
+    --bg-raise:    #272727;
+    --bg-raise:    light-dark(#EFF4F0, #272727);
+    --line:        #313131;
+    --line:        light-dark(#C0C9C2, #313131);
+    --line-soft:   #272727;
+    --line-soft:   light-dark(#DCE5DE, #272727);
+    --fg:          #F2F2F2;
+    --fg:          light-dark(#171D19, #F2F2F2);
+    --fg-dim:      #A9A9A9;
+    --fg-dim:      light-dark(#404943, #A9A9A9);
+    --fg-faint:    #8A8A8A;
+    --fg-faint:    light-dark(#5F6A63, #8A8A8A);
 
-    /*
-     * The brand green is a signal colour. On a pale surface it cannot carry
-     * text, so light mode splits it: --brand is the readable action colour
-     * and --brand-mark is the raw green the logo is drawn in.
-     */
-    --brand:      #26E085;
-    --brand:      light-dark(#00794A, #26E085);
-    --brand-mark: #26E085;
-    --brand-mark: light-dark(#00DA7D, #26E085);
-    --brand-ink:  #04301C;
-    --brand-ink:  light-dark(#FFFFFF, #04301C);
+    /* The app's signal green. On a pale surface it cannot carry text, so light
+       mode splits it into a readable action colour and the raw logo mark. */
+    --brand:       #26E085;
+    --brand:       light-dark(#00794A, #26E085);
+    --brand-mark:  #26E085;
+    --brand-mark:  light-dark(#00DA7D, #26E085);
+    --brand-ink:   #042315;
+    --brand-ink:   light-dark(#FFFFFF, #042315);
+    --device:      #000000;
+    --device:      light-dark(#141414, #000000);
 
-    --shadow-card: 0 30px 70px -30px rgba(0,0,0,.9);
-    --shadow-card: light-dark(0 22px 54px -28px rgba(16,32,22,.34), 0 30px 70px -30px rgba(0,0,0,.9));
-    --hairline: 0 1px 0 0 rgba(255,255,255,.05);
-    --hairline: light-dark(0 1px 0 0 rgba(255,255,255,.85), 0 1px 0 0 rgba(255,255,255,.05));
+    /* The one gradient on the page, and it is on text only. */
+    --hero-from:   #FFFFFF;
+    --hero-from:   light-dark(#000000, #FFFFFF);
+    --hero-to:     #9B9B9B;
+    --hero-to:     light-dark(#666666, #9B9B9B);
 
-    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    /* Spacing scale */
+    --s-25: 2px;  --s-50: 4px;  --s-75: 8px;  --s-100: 12px; --s-200: 16px;
+    --s-300: 24px; --s-400: 32px; --s-500: 40px; --s-600: 48px; --s-700: 64px;
+    --s-800: 80px; --s-900: 96px;
 
-    --sans: "Geist", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    /* Radius scale */
+    --r-sm: 4px; --r-md: 6px; --r-lg: 8px; --r-xl: 12px; --r-2xl: 16px;
+    --r-3xl: 24px; --r-full: 9999px;
+
+    /* Motion: mass and spring, never a default ease. Nothing under 200ms. */
+    --ease: cubic-bezier(0.32, 0.72, 0, 1);
+    --t-micro: 220ms;
+
+    /* z index scale, so no component invents its own number. */
+    --z-sheet: 55;
+    --z-nav: 60;
+    --z-grain: 90;
+    --z-skip: 100;
+
+    --sans: "Geist", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
-    --gutter: clamp(1.25rem, 5vw, 2.5rem);
-    --measure: 62ch;
+    /* Shadows are tinted toward the surface hue, not pure black: a neutral
+       black drop shadow on a green tinted page reads as dirt. */
+    --shadow-card: 0 30px 70px -30px rgba(2, 18, 10, .82);
+    --shadow-card: light-dark(0 22px 54px -28px rgba(16, 32, 22, .3), 0 30px 70px -30px rgba(2, 18, 10, .82));
+    --shadow-nav: 0 10px 30px -18px rgba(2, 18, 10, .6);
+    --shadow-nav: light-dark(0 10px 30px -18px rgba(16, 32, 22, .22), 0 10px 30px -18px rgba(2, 18, 10, .6));
   }
 
-  /* An explicit choice overrides the system. */
   :root[data-theme="light"] { color-scheme: light; }
   :root[data-theme="dark"] { color-scheme: dark; }
 
   * { box-sizing: border-box; }
 
-  html { -webkit-text-size-adjust: 100%; }
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+    scroll-padding-top: 96px;
+  }
 
   body {
     margin: 0;
     background: var(--bg);
     color: var(--fg);
-    font: 400 1rem/1.65 var(--sans);
-    font-optical-sizing: auto;
+    font: 400 16px/24px var(--sans);
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
   }
 
-  /*
-   * A theme change is a change of light, so it is eased rather than cut.
-   * Only the big surfaces move; the small ones change with them.
-   */
-  body, header.bar, .phone, .shot, pre {
+  /* A theme change is a change of light, so it is eased rather than cut. */
+  body, .card, .phone, pre, .pill {
     transition:
-      background-color 300ms var(--ease-out),
-      border-color 300ms var(--ease-out),
-      color 300ms var(--ease-out);
+      background-color 300ms var(--ease),
+      border-color 300ms var(--ease),
+      color 300ms var(--ease);
   }
 
   a { color: inherit; }
-
   ::selection { background: var(--brand); color: var(--brand-ink); }
+
+  /*
+   * Grain. The surfaces are flat by rule, which leaves them looking digital;
+   * a fixed, non-interactive noise layer adds tooth without touching layout or
+   * introducing a gradient. It is painted once and never scrolls, so it costs
+   * one composited layer and no per frame work.
+   */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-grain);
+    pointer-events: none;
+    opacity: .028;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  :root[data-theme="light"] body::after { opacity: .04; }
 
   :focus-visible {
     outline: 2px solid var(--brand);
     outline-offset: 3px;
-    border-radius: 4px;
+    border-radius: var(--r-sm);
   }
+
+  img { max-width: 100%; }
 
   .skip {
     position: absolute; left: -9999px; top: 0;
     background: var(--brand); color: var(--brand-ink);
-    padding: .75rem 1.25rem; border-radius: 0 0 12px 0;
-    font-weight: 600; z-index: 100;
+    padding: var(--s-100) var(--s-200);
+    border-radius: 0 0 var(--r-xl) 0;
+    font-weight: 600; z-index: var(--z-skip);
   }
   .skip:focus { left: 0; }
+
+  /* ---------- type scale ---------- */
+
+  .t-xs   { font-size: 12px; line-height: 16px; }
+  .t-sm   { font-size: 14px; line-height: 20px; }
+  .t-base { font-size: 16px; line-height: 24px; }
+  .t-lg   { font-size: 18px; line-height: 28px; }
+
+  h1, h2, h3, p { margin: 0; }
+
+  h1 {
+    font-size: 36px; line-height: 40px;
+    font-weight: 600; letter-spacing: -0.02em;
+    text-wrap: balance;
+    max-width: 680px;
+  }
+
+  h2 {
+    font-size: 24px; line-height: 32px;
+    font-weight: 600; letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  h3 {
+    font-size: 18px; line-height: 28px;
+    font-weight: 600; letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  p { text-wrap: pretty; }
+
+  .lede {
+    font-size: 16px; line-height: 24px;
+    color: var(--fg-dim);
+    max-width: 680px;
+  }
+
+  .section-lede {
+    font-size: 16px; line-height: 24px;
+    color: var(--fg-dim);
+    max-width: 680px;
+    margin-top: var(--s-200);
+  }
 
   /* ---------- shell ---------- */
 
   .wrap {
-    width: min(1120px, 100% - var(--gutter) * 2);
+    width: 100%;
+    max-width: 1120px;
     margin-inline: auto;
+    padding-inline: var(--s-300);
   }
 
-  header.bar {
-    position: sticky; top: 0; z-index: 20;
-    background: color-mix(in oklab, var(--bg) 78%, transparent);
-    backdrop-filter: blur(18px) saturate(160%);
-    border-bottom: 1px solid var(--line-soft);
+  section { padding-block: var(--s-700) var(--s-800); }
+
+  /* ---------- fluid island nav ---------- */
+
+  .island {
+    position: fixed;
+    inset-inline: 0;
+    top: 0;
+    z-index: var(--z-nav);
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+    padding-inline: var(--s-300);
   }
 
-  .bar-inner {
-    display: flex; align-items: center; gap: 1rem;
-    height: 64px;
+  .pill {
+    pointer-events: auto;
+    margin-top: var(--s-300);
+    display: flex;
+    align-items: center;
+    gap: var(--s-100);
+    width: max-content;
+    max-width: 100%;
+    padding: var(--s-75);
+    border-radius: var(--r-full);
+    border: 1px solid var(--line-soft);
+    background: color-mix(in oklab, var(--bg) 62%, transparent);
+    backdrop-filter: blur(22px) saturate(180%);
+    box-shadow: var(--shadow-nav);
   }
 
   .brand {
-    display: inline-flex; align-items: center; gap: .625rem;
-    font-weight: 600; letter-spacing: -0.015em;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-75);
+    padding-inline: var(--s-75);
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
     text-decoration: none;
+    white-space: nowrap;
   }
   .brand svg { display: block; color: var(--brand-mark); }
 
-  nav.top { margin-left: auto; display: flex; gap: .25rem; align-items: center; }
+  .pill-links { display: flex; align-items: center; gap: var(--s-25); }
 
-  nav.top a {
-    text-decoration: none; color: var(--fg-dim);
-    font-size: .875rem; padding: .5rem .75rem; border-radius: 8px;
-    transition: color 140ms var(--ease-out), background 140ms var(--ease-out);
+  .pill-links a {
+    text-decoration: none;
+    color: var(--fg-dim);
+    font-size: 14px;
+    line-height: 20px;
+    padding: var(--s-75) var(--s-100);
+    border-radius: var(--r-full);
+    transition: color var(--t-micro) var(--ease), background var(--t-micro) var(--ease);
   }
-  nav.top a:hover { color: var(--fg); background: var(--bg-raise); }
+  .pill-links a:hover { color: var(--fg); background: var(--bg-raise); }
+  .pill-links a:active { transform: translateY(1px); }
+  /* The current section is marked, not guessed: the reader can see where they are. */
+  .pill-links a[aria-current="true"] { color: var(--fg); background: var(--bg-raise); }
 
-  /*
-   * The theme control. It sits in the header because the header is the one
-   * piece of chrome the reader is most likely to reach for, and it is a
-   * translucent material so it belongs to the same layer as the bar.
-   */
-  .theme-toggle {
+  .pill-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-50);
+    padding: var(--s-75) var(--s-100);
+    border-radius: var(--r-full);
+    background: var(--brand);
+    color: var(--brand-ink);
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 200ms var(--ease), transform 200ms var(--ease);
+  }
+  .pill-cta:hover { background: color-mix(in oklab, var(--brand) 88%, white); }
+  .pill-cta:active { transform: scale(.97); }
+
+  .icon-btn {
     position: relative;
-    display: grid; place-items: center;
-    width: 34px; height: 34px;
-    margin-left: .25rem;
+    display: grid;
+    place-items: center;
+    width: 36px; height: 36px;
     border: 1px solid var(--line-soft);
-    border-radius: 999px;
-    background: var(--bg-raise);
+    border-radius: var(--r-full);
+    background: transparent;
     color: var(--fg-dim);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition:
-      transform 140ms var(--ease-out),
-      background 140ms var(--ease-out),
-      color 140ms var(--ease-out),
-      border-color 140ms var(--ease-out);
+    transition: color var(--t-micro) var(--ease), border-color var(--t-micro) var(--ease), transform var(--t-micro) var(--ease);
   }
-  .theme-toggle:hover { color: var(--fg); border-color: var(--line); }
-  /* Feedback on the press, not on the release. */
-  .theme-toggle:active { transform: scale(.9); }
+  .icon-btn:hover { color: var(--fg); border-color: var(--line); }
+  .icon-btn:active { transform: scale(.92); }
 
   .theme-toggle svg {
     grid-area: 1 / 1;
-    transition: opacity 240ms var(--ease-out), transform 240ms var(--ease-out);
+    transition: opacity 240ms var(--ease), transform 240ms var(--ease);
   }
   /* The control shows where it would take you. */
-  .theme-toggle .icon-sun { opacity: 1; transform: none; }
+  .theme-toggle .icon-sun  { opacity: 1; transform: none; }
   .theme-toggle .icon-moon { opacity: 0; transform: scale(.6) rotate(40deg); }
-  :root[data-theme="light"] .theme-toggle .icon-sun { opacity: 0; transform: scale(.6) rotate(-40deg); }
+  :root[data-theme="light"] .theme-toggle .icon-sun  { opacity: 0; transform: scale(.6) rotate(-40deg); }
   :root[data-theme="light"] .theme-toggle .icon-moon { opacity: 1; transform: none; }
+
+  .burger { display: none; }
+  .burger span {
+    position: absolute;
+    left: 11px; right: 11px;
+    top: 0; bottom: 0;
+    height: 1.5px;
+    margin-block: auto;
+    background: currentColor;
+    border-radius: var(--r-full);
+    transition: transform 700ms var(--ease);
+  }
+  .burger span:nth-child(1) { transform: translateY(-4px); }
+  .burger span:nth-child(2) { transform: translateY(4px); }
+  .burger[aria-expanded="true"] span:nth-child(1) { transform: rotate(45deg); }
+  .burger[aria-expanded="true"] span:nth-child(2) { transform: rotate(-45deg); }
+
+  /* Without a script the theme switch and the menu cannot do anything, so they
+     are not shown. The system preference still themes the page, and the
+     sections stay reachable by scrolling. */
+  .no-js .theme-toggle, .no-js .burger { display: none; }
+
+  /* ---------- expanded sheet ---------- */
+
+  .sheet {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-sheet);
+    display: grid;
+    align-content: center;
+    gap: var(--s-100);
+    padding: var(--s-900) var(--s-300) var(--s-600);
+    background: color-mix(in oklab, var(--bg) 92%, transparent);
+    backdrop-filter: blur(48px) saturate(140%);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 700ms var(--ease), visibility 700ms var(--ease);
+  }
+  .sheet[data-open="true"] { opacity: 1; visibility: visible; }
+
+  .sheet a {
+    display: block;
+    padding: var(--s-100) 0;
+    font-size: 24px;
+    line-height: 32px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    text-decoration: none;
+    color: var(--fg-dim);
+    opacity: 0;
+    transform: translateY(48px);
+    transition: opacity 700ms var(--ease), transform 700ms var(--ease), color 200ms var(--ease);
+  }
+  .sheet a:hover { color: var(--fg); }
+  .sheet[data-open="true"] a {
+    opacity: 1;
+    transform: none;
+    transition-delay: calc(var(--i, 0) * 50ms + 100ms);
+  }
+
+  /* The stagger index lives in the markup as data-i; CSS cannot read it into a
+     custom property, so each slot is declared once here instead. */
+  .sheet a[data-i="0"] { --i: 0; }
+  .sheet a[data-i="1"] { --i: 1; }
+  .sheet a[data-i="2"] { --i: 2; }
+  .sheet a[data-i="3"] { --i: 3; }
+  .sheet a[data-i="4"] { --i: 4; }
+  .sheet a[data-i="5"] { --i: 5; }
+  .sheet .sheet-cta { color: var(--brand); }
 
   /* ---------- hero ---------- */
 
   .hero {
     display: grid;
-    grid-template-columns: 1.05fr .95fr;
-    gap: clamp(2rem, 5vw, 4.5rem);
+    grid-template-columns: 1fr;
+    gap: var(--s-600);
     align-items: center;
-    padding-block: clamp(3.5rem, 9vw, 7rem) clamp(3rem, 7vw, 5rem);
+    padding-block: var(--s-900) var(--s-700);
   }
 
   .eyebrow {
-    display: inline-flex; align-items: center; gap: .5rem;
-    font: 500 .75rem/1 var(--mono);
-    letter-spacing: .08em; text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-75);
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
     color: var(--brand);
-    border: 1px solid color-mix(in oklab, var(--brand) 32%, transparent);
-    border-radius: 999px;
-    padding: .4rem .7rem;
-    margin-bottom: 1.5rem;
+    border: 1px solid color-mix(in oklab, var(--brand) 30%, transparent);
+    border-radius: var(--r-full);
+    padding: var(--s-50) var(--s-100);
+    margin-bottom: var(--s-300);
   }
   .eyebrow .dot {
-    width: 6px; height: 6px; border-radius: 50%;
+    width: 6px; height: 6px; border-radius: var(--r-full);
     background: var(--brand-mark);
-    box-shadow: 0 0 0 0 color-mix(in oklab, var(--brand-mark) 70%, transparent);
-    animation: pulse 2.4s var(--ease-in-out) infinite;
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--brand-mark) 60%, transparent);
+    animation: pulse 2.4s cubic-bezier(0.77, 0, 0.175, 1) infinite;
   }
   @keyframes pulse {
     0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--brand-mark) 55%, transparent); }
-    50% { box-shadow: 0 0 0 6px transparent; }
+    50%      { box-shadow: 0 0 0 6px transparent; }
   }
 
-  h1 {
-    font-size: clamp(2.25rem, 5.2vw, 3.5rem);
-    line-height: 1.05;
-    letter-spacing: -0.035em;
-    font-weight: 600;
-    margin: 0 0 1.25rem;
-    text-wrap: balance;
+  .hero h1 {
+    background-image: linear-gradient(90deg, var(--hero-from), var(--hero-to));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: var(--s-300);
+  }
+  @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+    .hero h1 { color: var(--fg); background-image: none; }
   }
 
-  .lede {
-    font-size: clamp(1.0625rem, 1.6vw, 1.1875rem);
-    line-height: 1.6;
-    letter-spacing: -0.008em;
-    color: var(--fg-dim);
-    max-width: 46ch;
-    margin: 0 0 2rem;
-    text-wrap: pretty;
+  /* A gradient heading is text in a colour the reader cannot read, so high
+     contrast and forced colours get the solid foreground instead. */
+  @media (prefers-contrast: more) {
+    .hero h1 { background-image: none; color: var(--fg); }
+  }
+  @media (forced-colors: active) {
+    .hero h1 { background-image: none; color: CanvasText; }
   }
 
-  .cta-row { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+  .hero .lede { margin-bottom: var(--s-400); }
+
+  .cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--s-200);
+  }
 
   .btn {
-    display: inline-flex; align-items: center; gap: .5rem;
-    padding: .8rem 1.15rem;
-    border-radius: 12px;
-    font-weight: 600; font-size: .9375rem;
-    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s-75);
+    padding: var(--s-75) var(--s-100);
+    border-radius: var(--r-lg);
     border: 1px solid transparent;
-    transition: transform 140ms var(--ease-out), background 140ms var(--ease-out),
-                border-color 140ms var(--ease-out);
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 200ms var(--ease), border-color 200ms var(--ease), transform var(--t-micro) var(--ease);
   }
-  .btn:active { transform: scale(0.975); }
+  .btn:active { transform: scale(.98); }
 
   .btn-primary { background: var(--brand); color: var(--brand-ink); }
-  .btn-primary:hover { background: color-mix(in oklab, var(--brand) 86%, white); }
+  .btn-primary:hover { background: color-mix(in oklab, var(--brand) 88%, white); }
 
-  .btn-ghost {
-    color: var(--fg);
-    border-color: var(--line);
-    background: var(--bg-raise);
+  .quiet-link {
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--fg-dim);
+    text-decoration: none;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: var(--s-25);
+    transition: color var(--t-micro) var(--ease), border-color var(--t-micro) var(--ease);
   }
-  .btn-ghost:hover { border-color: color-mix(in oklab, var(--fg) 16%, var(--line)); }
+  .quiet-link:hover { color: var(--fg); border-color: var(--fg); }
 
   .meta {
-    margin-top: 1.5rem;
-    font: 400 .8125rem/1.6 var(--mono);
+    margin-top: var(--s-300);
+    font: 400 12px/16px var(--mono);
     letter-spacing: .01em;
     color: var(--fg-faint);
   }
   .meta code { color: var(--fg-dim); }
 
-  /* phone */
+  /* ---------- phone ---------- */
 
-  .phone-stage { position: relative; justify-self: center; }
+  .phone-stage { justify-self: center; width: 100%; max-width: 320px; }
 
   .phone {
-    width: clamp(240px, 26vw, 300px);
-    border-radius: 38px;
+    width: 100%;
+    padding: var(--s-75);
+    border-radius: var(--r-3xl);
     border: 1px solid var(--line);
-    background: var(--bg-soft);
-    padding: 9px;
-    box-shadow: var(--shadow-card), var(--hairline);
+    background: var(--device);
+    box-shadow: var(--shadow-card);
   }
+  /* Inner radius = outer radius minus the gap between them. */
   .phone img {
-    display: block; width: 100%; height: auto;
-    border-radius: 30px;
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--r-2xl);
   }
 
-  /* ---------- sections ---------- */
+  .phone-caption {
+    margin-top: var(--s-200);
+    text-align: center;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--fg-faint);
+  }
 
-  section { padding-block: clamp(3rem, 7vw, 5.5rem); }
+  /* ---------- tagline reveal ---------- */
 
-  .rule { height: 1px; background: var(--line-soft); border: 0; margin: 0; }
-
-  h2 {
-    font-size: clamp(1.5rem, 3vw, 2rem);
-    line-height: 1.2;
-    letter-spacing: -0.025em;
+  .reveal-line {
+    font-size: 30px;
+    line-height: 36px;
     font-weight: 600;
-    margin: 0 0 .75rem;
+    letter-spacing: -0.02em;
+    max-width: 680px;
     text-wrap: balance;
   }
-
-  .section-lede {
-    color: var(--fg-dim);
-    max-width: var(--measure);
-    margin: 0 0 2.5rem;
-    text-wrap: pretty;
+  .js .tw {
+    opacity: .3;
+    transition: opacity 700ms var(--ease);
+    /* Words sharing a line cross the trigger together; the delay makes them
+       resolve one at a time in reading order instead of as a block. */
+    transition-delay: calc(var(--w, 0) * 45ms);
   }
+  .js .tw.on { opacity: 1; }
 
-  /* feature rows: two columns, alternating, not a card grid */
+  /* The word index, declared rather than set inline: CSS cannot count elements
+     into a custom property, and inline styles are reserved for nothing here. */
+  .tw:nth-child(1)  { --w: 0; }
+  .tw:nth-child(2)  { --w: 1; }
+  .tw:nth-child(3)  { --w: 2; }
+  .tw:nth-child(4)  { --w: 3; }
+  .tw:nth-child(5)  { --w: 4; }
+  .tw:nth-child(6)  { --w: 5; }
+  .tw:nth-child(7)  { --w: 6; }
+  .tw:nth-child(8)  { --w: 7; }
+  .tw:nth-child(9)  { --w: 8; }
+  .tw:nth-child(10) { --w: 9; }
+  .tw:nth-child(11) { --w: 10; }
+  .tw:nth-child(12) { --w: 11; }
+  .tw:nth-child(13) { --w: 12; }
+  .tw:nth-child(14) { --w: 13; }
+  .tw:nth-child(15) { --w: 14; }
+  .tw:nth-child(16) { --w: 15; }
 
-  .feature {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: clamp(1.5rem, 4vw, 3.5rem);
-    align-items: center;
-    padding-block: clamp(1.75rem, 4vw, 2.75rem);
-    border-top: 1px solid var(--line-soft);
-  }
-  .feature:nth-child(even) .feature-text { order: 2; }
+  /* ---------- cards ---------- */
 
-  .feature h3 {
-    font-size: 1.125rem;
-    letter-spacing: -0.015em;
-    font-weight: 600;
-    margin: 0 0 .5rem;
-  }
-  .feature p {
-    margin: 0;
-    color: var(--fg-dim);
-    max-width: 42ch;
-    text-wrap: pretty;
-  }
+  .grid { display: grid; gap: var(--s-300); }
+  .block { margin-top: var(--s-400); }
 
-  .shot {
-    border: 1px solid var(--line);
-    border-radius: 20px;
+  .card {
+    padding: var(--s-300);
+    border-radius: var(--r-2xl);
+    border: 1px solid var(--line-soft);
     background: var(--bg-soft);
-    padding: 8px;
-    justify-self: center;
-    width: min(100%, 300px);
-    box-shadow: var(--hairline);
   }
-  .shot img { display: block; width: 100%; height: auto; border-radius: 14px; }
 
-  /* list of specifics, no cards */
+  .card p { color: var(--fg-dim); margin-top: var(--s-75); }
 
-  .specs { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
-  .specs li {
+  .card-icon {
     display: grid;
-    grid-template-columns: 1.5rem 1fr;
-    gap: .875rem;
-    padding-block: .875rem;
-    border-top: 1px solid var(--line-soft);
+    place-items: center;
+    width: 32px; height: 32px;
+    border-radius: var(--r-lg);
+    background: color-mix(in oklab, var(--brand) 14%, transparent);
+    color: var(--brand);
+    margin-bottom: var(--s-200);
+  }
+
+  /* ---------- steps ---------- */
+
+  /*
+   * Steps step down as they go right, and each one is a different width, so the
+   * row reads as a sequence rather than three interchangeable cards. Three
+   * equal columns is the layout every generated page reaches for; the offset is
+   * what makes it a route.
+   */
+  .steps {
+    display: grid;
+    gap: var(--s-400);
+    margin-top: var(--s-500);
+  }
+
+  .step { padding-top: var(--s-300); border-top: 1px solid var(--line-soft); }
+  .step-num {
+    display: inline-grid;
+    place-items: center;
+    width: 24px; height: 24px;
+    margin-bottom: var(--s-200);
+    border-radius: var(--r-full);
+    border: 1px solid var(--line);
+    font: 500 12px/16px var(--mono);
+    font-variant-numeric: tabular-nums;
     color: var(--fg-dim);
   }
-  .specs li:first-child { border-top: 0; }
-  .specs strong { color: var(--fg); font-weight: 600; }
-  .specs .tick { color: var(--brand); }
-
-  /* ---------- install ---------- */
-
-  .install {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: clamp(1.5rem, 4vw, 3rem);
-    align-items: start;
-  }
+  .step h3 { margin-bottom: var(--s-75); }
+  .step p { color: var(--fg-dim); }
 
   pre {
-    margin: 0;
-    background: var(--bg-soft);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 1rem 1.125rem;
+    margin: var(--s-200) 0 0;
+    padding: var(--s-200);
+    border-radius: var(--r-xl);
+    border: 1px solid var(--line-soft);
+    background: var(--bg-raise);
     overflow-x: auto;
-    font: 400 .8125rem/1.75 var(--mono);
+    font: 400 12px/16px var(--mono);
     color: var(--fg-dim);
   }
   pre .c { color: var(--fg-faint); }
   pre .p { color: var(--brand); }
 
+  /* ---------- inside ---------- */
+
+  .shot {
+    padding: var(--s-75);
+    border-radius: var(--r-2xl);
+    border: 1px solid var(--line-soft);
+    background: var(--bg-soft);
+  }
+  .shot img { display: block; width: 100%; height: auto; border-radius: var(--r-lg); }
+  .shot figcaption {
+    margin-top: var(--s-200);
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--fg-dim);
+  }
+  .shot figcaption strong { color: var(--fg); font-weight: 600; }
+
+  /* ---------- facts ---------- */
+
+  .facts { display: grid; gap: var(--s-300); margin: 0; padding: 0; list-style: none; }
+  .facts li { display: grid; grid-template-columns: 20px 1fr; gap: var(--s-100); }
+  .facts .tick { color: var(--brand); margin-top: var(--s-25); }
+  .facts span { color: var(--fg-dim); font-size: 14px; line-height: 20px; }
+  .facts strong { color: var(--fg); font-weight: 600; }
+
+  /* ---------- proof ---------- */
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--s-300);
+    margin: var(--s-500) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .stats b {
+    display: block;
+    font: 500 30px/36px var(--mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+  }
+  .stats span {
+    display: block;
+    margin-top: var(--s-75);
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--fg-dim);
+  }
+
+  .proof-note {
+    color: var(--fg-dim);
+    max-width: 680px;
+    margin-top: var(--s-500);
+  }
+
+  /* ---------- faq ---------- */
+
+  /*
+   * Questions as a two column list of headed entries, not a stack of
+   * chevrons. A landing page FAQ is read, not operated: a reader scanning for
+   * one objection should see all the questions at once instead of opening
+   * eight disclosures to find the one that matters.
+   */
+  .faq {
+    display: grid;
+    gap: var(--s-400) var(--s-600);
+    margin-top: var(--s-500);
+  }
+
+  .faq article {
+    padding-top: var(--s-300);
+    border-top: 1px solid var(--line-soft);
+  }
+
+  .faq h3 {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+    margin-bottom: var(--s-100);
+  }
+
+  .faq p {
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--fg-dim);
+    max-width: 60ch;
+  }
+
+  .faq code {
+    font: 400 14px/20px var(--mono);
+    color: var(--fg);
+  }
+
+  @media (min-width: 640px) {
+    .faq { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ---------- final cta ---------- */
+
+  .final {
+    text-align: center;
+    padding: var(--s-600) var(--s-300);
+    border-radius: var(--r-3xl);
+    border: 1px solid var(--line-soft);
+    background: var(--bg-soft);
+  }
+  .final h2 {
+    font-size: 30px;
+    line-height: 36px;
+    max-width: 680px;
+    margin-inline: auto;
+  }
+  .final p {
+    color: var(--fg-dim);
+    max-width: 680px;
+    margin: var(--s-200) auto 0;
+  }
+  .final .btn { margin-top: var(--s-400); }
+
   /* ---------- footer ---------- */
 
   footer {
+    padding-block: var(--s-600) var(--s-700);
     border-top: 1px solid var(--line-soft);
-    padding-block: 2.5rem 3.5rem;
     color: var(--fg-faint);
-    font-size: .875rem;
+    font-size: 14px;
+    line-height: 20px;
   }
   footer .wrap {
-    display: flex; flex-wrap: wrap; gap: 1rem 2rem;
-    align-items: center; justify-content: space-between;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-200) var(--s-400);
+    align-items: center;
+    justify-content: space-between;
   }
-  footer a { color: var(--fg-dim); text-decoration: none; }
+  footer nav { display: flex; flex-wrap: wrap; gap: var(--s-300); }
+  footer a {
+    color: var(--fg-dim);
+    text-decoration: none;
+    transition: color var(--t-micro) var(--ease);
+  }
   footer a:hover { color: var(--fg); }
-  footer nav { display: flex; gap: 1.25rem; }
 
   /* ---------- motion ---------- */
 
-  [data-reveal] {
+  .js [data-reveal] {
     opacity: 0;
-    transform: translateY(12px);
-    transition: opacity 620ms var(--ease-out), transform 620ms var(--ease-out);
+    transform: translateY(64px);
+    filter: blur(12px);
+    transition:
+      opacity 800ms var(--ease),
+      transform 800ms var(--ease),
+      filter 800ms var(--ease);
   }
-  [data-reveal].in {
+  .js [data-reveal].in {
     opacity: 1;
     transform: none;
+    filter: blur(0);
   }
 
   @media (prefers-reduced-motion: reduce) {
-    * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
-    [data-reveal] { opacity: 1; transform: none; transition: none; }
-    .eyebrow .dot { animation: none; }
     html { scroll-behavior: auto; }
-    /* A theme change still needs to happen, so it fades instead of sliding. */
-    body, header.bar, .phone, .shot, pre { transition: opacity 200ms ease; }
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
+    }
+    .js [data-reveal] { opacity: 1; transform: none; filter: none; }
+    .js .tw { opacity: 1; }
+    .sheet a { opacity: 1; transform: none; }
   }
 
   /* A material that cannot be translucent is a material that is solid. */
   @media (prefers-reduced-transparency: reduce) {
-    header.bar { background: var(--bg); backdrop-filter: none; }
+    .pill, .sheet { background: var(--bg); backdrop-filter: none; }
   }
 
   @media (prefers-contrast: more) {
-    .btn-ghost, .theme-toggle { border-color: var(--fg); }
-    header.bar { background: var(--bg); }
+    .pill, .sheet { background: var(--bg); backdrop-filter: none; }
+    .card, .shot, .final, .faq article { border-color: var(--fg); }
+    .pill-cta { border: 1px solid var(--fg); }
   }
 
   /* ---------- responsive ---------- */
 
-  @media (max-width: 860px) {
-    .hero { grid-template-columns: 1fr; }
-    .phone-stage { order: -1; }
-    .feature { grid-template-columns: 1fr; }
-    .feature:nth-child(even) .feature-text { order: 0; }
-    .install { grid-template-columns: 1fr; }
-    nav.top { display: none; }
-    /* The theme control outlives the navigation it used to sit inside. */
-    .theme-toggle { margin-left: auto; }
+  @media (min-width: 640px) {
+    .wrap { padding-inline: var(--s-500); }
+    h1 { font-size: 48px; line-height: 48px; }
+    h2 { font-size: 30px; line-height: 36px; }
+    .lede, .section-lede { font-size: 18px; line-height: 28px; }
+    .reveal-line { font-size: 36px; line-height: 40px; }
+    section { padding-block: var(--s-800) var(--s-900); }
+    .hero { gap: var(--s-700); padding-block: var(--s-900) var(--s-800); }
+    .grid.two { grid-template-columns: repeat(2, 1fr); }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .facts { grid-template-columns: repeat(2, 1fr); gap: var(--s-300) var(--s-400); }
+    .final h2 { font-size: 36px; line-height: 40px; }
   }
 
-  @media (max-width: 380px) {
-    .cta-row { flex-direction: column; align-items: stretch; }
-    .btn { justify-content: center; }
+  @media (min-width: 900px) {
+    .hero { grid-template-columns: 1.05fr .95fr; }
+    .phone-stage { justify-self: end; max-width: 340px; }
+    .stats { grid-template-columns: repeat(4, 1fr); }
+    .reveal-line { font-size: 48px; line-height: 48px; }
+    .final { padding: var(--s-800) var(--s-600); }
+
+    /* The steps form a descending staircase: each column is narrower than the
+       one before it and sits lower, so the eye travels left to right and down. */
+    .steps {
+      grid-template-columns: 1.15fr 1fr .85fr;
+      gap: var(--s-400) var(--s-500);
+      align-items: start;
+    }
+    .step:nth-child(2) { margin-top: var(--s-400); }
+    .step:nth-child(3) { margin-top: var(--s-800); }
+  }
+
+  @media (max-width: 899px) {
+    .pill-links, .pill-cta { display: none; }
+    .burger { display: grid; }
+    .island { justify-content: space-between; }
+    .pill { width: 100%; }
+  }
+
+  /* Without a script the sheet can never open, so the links go back into the
+     bar itself and the brand keeps only its mark to make room. */
+  @media (max-width: 899px) {
+    .no-js .pill-links { display: flex; }
+    .no-js .brand { font-size: 0; gap: 0; padding-inline: var(--s-50); }
+    .no-js .pill { gap: var(--s-25); }
+    .no-js .pill-links a { padding-inline: var(--s-75); }
+  }
+
+  @media (min-width: 900px) {
+    .sheet { display: none; }
   }
 </style>
 </head>
@@ -501,61 +934,79 @@
 
 <a class="skip" href="#main">Skip to content</a>
 
-<header class="bar">
-  <div class="wrap bar-inner">
-    <a class="brand" href="/opencode-mobile/" aria-label="OpenCode Mobile home">
-      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+<header class="island">
+  <nav class="pill" aria-label="Sections">
+    <a class="brand" href="/opencode-mobile/">
+      <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
         <rect x="2" y="3" width="20" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="1.7"/>
         <path d="M7 9l3 2.5L7 14M12.5 14h4" fill="none" stroke="currentColor" stroke-width="1.7"
               stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       OpenCode Mobile
     </a>
-    <nav class="top" aria-label="Sections">
-      <a href="#features">Features</a>
-      <a href="#install">Install</a>
-      <a href="https://github.com/yaffalhakim1/opencode-mobile">GitHub</a>
-    </nav>
-    <button class="theme-toggle" type="button" id="theme-toggle" aria-label="Switch to light mode">
-      <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none"
-           stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="4.1"/>
-        <path d="M12 2.7v2.1M12 19.2v2.1M2.7 12h2.1M19.2 12h2.1M5.5 5.5l1.5 1.5M17 17l1.5 1.5M18.5 5.5L17 7M7 17l-1.5 1.5"/>
+
+    <div class="pill-links">
+      <a href="#how">How it works</a>
+      <a href="#inside">Inside</a>
+      <a href="#faq">Questions</a>
+    </div>
+
+    <a class="pill-cta" href="https://github.com/yaffalhakim1/opencode-mobile/releases/latest">
+      Get the APK
+    </a>
+
+    <button class="icon-btn theme-toggle" type="button" id="theme-toggle" aria-label="Switch to light mode">
+      <svg class="icon-sun" viewBox="0 0 256 256" width="18" height="18" fill="currentColor" aria-hidden="true">
+        <path d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z"/>
       </svg>
-      <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none"
-           stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M20.2 14.4A8.5 8.5 0 1 1 9.6 3.8a6.7 6.7 0 0 0 10.6 10.6z"/>
+      <svg class="icon-moon" viewBox="0 0 256 256" width="18" height="18" fill="currentColor" aria-hidden="true">
+        <path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160a106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/>
       </svg>
     </button>
-  </div>
+
+    <button class="icon-btn burger" type="button" id="burger" aria-expanded="false" aria-controls="sheet" aria-label="Open menu">
+      <span aria-hidden="true"></span>
+      <span aria-hidden="true"></span>
+    </button>
+  </nav>
 </header>
+
+<div class="sheet" id="sheet" data-open="false">
+  <a href="#how"      data-i="0">How it works</a>
+  <a href="#inside"   data-i="1">Inside</a>
+  <a href="#proof"    data-i="2">The build</a>
+  <a href="#faq"      data-i="3">Questions</a>
+  <a href="https://github.com/yaffalhakim1/opencode-mobile" data-i="4">Source on GitHub</a>
+  <a class="sheet-cta" href="https://github.com/yaffalhakim1/opencode-mobile/releases/latest" data-i="5">Get the APK</a>
+</div>
 
 <main id="main">
 
   <div class="wrap hero">
     <div>
-      <span class="eyebrow"><span class="dot" aria-hidden="true"></span>Native Android · Kotlin</span>
+      <span class="eyebrow"><span class="dot" aria-hidden="true"></span>v1.0.14 · native Android</span>
 
-      <h1>Run your agent from the sofa.</h1>
+      <h1>Run your agent<br />from the sofa.</h1>
 
       <p class="lede">
-        OpenCode Mobile talks to the OpenCode server on your machine. You watch
-        the reply arrive word by word, answer when it asks you something, and
-        approve the files it edits.
+        OpenCode Mobile is the Android client for the OpenCode server on your own
+        machine. The reply streams in as it is written, and when the agent stops
+        to ask you something, the question arrives on the phone in your hand.
       </p>
 
       <div class="cta-row">
         <a class="btn btn-primary" href="https://github.com/yaffalhakim1/opencode-mobile/releases/latest">
+          <svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+            <path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"/>
+          </svg>
           Download the APK
         </a>
-        <a class="btn btn-ghost" href="https://github.com/yaffalhakim1/opencode-mobile">
-          Read the source
-        </a>
+        <a class="quiet-link" href="https://github.com/yaffalhakim1/opencode-mobile">Read the source</a>
       </div>
 
       <p class="meta">
-        Android 8.0+ · 24&nbsp;MB · signed build<br />
-        <code>adb install -r opencode-mobile.apk</code>
+        24 MB signed build · Android 8.0+ · 271 unit tests<br />
+        <code>adb install -r opencode-mobile-v1.0.14.apk</code>
       </p>
     </div>
 
@@ -564,124 +1015,315 @@
         <picture>
           <source srcset="screens/chat.webp" type="image/webp" />
           <img src="screens/chat.png" width="1080" height="2400"
-             alt="The chat screen: a streamed answer with reasoning and tool cards above it" />
+             alt="The chat screen: a streamed answer with reasoning and tool rows above it" />
         </picture>
       </div>
+      <p class="phone-caption">A live turn, one card per step</p>
     </div>
   </div>
 
-  <hr class="rule" />
-
-  <section id="features">
+  <section id="changes">
     <div class="wrap">
-      <h2>How it handles a turn</h2>
+      <h2>What changes on your phone</h2>
       <p class="section-lede">
-        An agent turn is reasoning, tool calls and prose, interleaved, sometimes
-        stopping to ask you a question. The interface follows that shape.
+        Four things stop requiring a walk back to the desk. Each one exists
+        because the phone can do it and a terminal window cannot.
       </p>
 
-      <div class="feature" data-reveal>
-        <div class="feature-text">
-          <h3>Ten steps, one panel</h3>
+      <div class="grid two block">
+        <article class="card" data-reveal>
+          <div class="card-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor">
+              <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/>
+            </svg>
+          </div>
+          <h3>Approve the edit before it lands</h3>
           <p>
-            Reasoning and tool calls share a surface with a hairline between rows.
-            A long run stays compact, so the prose is what you read. Each row says
-            what happened ("Ran command", "Edited file") and marks it with a check
-            when it succeeded.
+            A permission request is a card that names the command and the exact
+            pattern that "Always allow" would remember. You see the shape of the
+            permission, not just a yes or no.
           </p>
-        </div>
-        <div class="shot">
-          <picture>
-          <source srcset="screens/chat.webp" type="image/webp" />
-          <img src="screens/chat.png" width="1080" height="2400" loading="lazy"
-               alt="Reasoning and tool rows grouped in one card, divided by faint lines" />
-          </picture>
-        </div>
-      </div>
+        </article>
 
-      <div class="feature" data-reveal>
-        <div class="feature-text">
-          <h3>It asks, you answer</h3>
+        <article class="card" data-reveal>
+          <div class="card-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor">
+              <path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"/>
+            </svg>
+          </div>
+          <h3>Watch a turn land as it happens</h3>
           <p>
-            When the agent needs a decision it blocks the turn and waits. Questions
-            and permission requests arrive as cards with their real choices,
-            including which pattern "Always allow" would remember.
+            The stream keeps running while the app is in the background, so you
+            come back to the answer rather than to a spinner. Long runs stay
+            compact: one panel for every step, with the prose left readable.
           </p>
-        </div>
-        <div class="shot">
-          <picture>
-          <source srcset="screens/sessions.webp" type="image/webp" />
-          <img src="screens/sessions.png" width="1080" height="2400" loading="lazy"
-               alt="The session list, grouped by recency with five sessions per group" />
-          </picture>
-        </div>
-      </div>
+        </article>
 
-      <div class="feature" data-reveal>
-        <div class="feature-text">
-          <h3>Long sessions stay navigable</h3>
+        <article class="card" data-reveal>
+          <div class="card-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor">
+              <path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"/>
+            </svg>
+          </div>
+          <h3>Answer the blocking question</h3>
           <p>
-            A session opens at the newest turn. Scroll up to page back through
-            history. Group by project or by when you last touched it, filter to
-            what is running, and start a new session in a chosen project.
+            When the agent needs a decision the turn stops and waits. The card
+            carries the real choices, so you pick one and the turn carries on
+            from where it paused.
+          </p>
+        </article>
+
+        <article class="card" data-reveal>
+          <div class="card-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor">
+              <path d="M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM96,192H64V160H96Zm0-48H64V112H96Zm48,48H112V160h32Zm0-48H112V112h32Zm48,48H160V160h32Zm0-48H160V112h32Z"/>
+            </svg>
+          </div>
+          <h3>Keep the password off the wire</h3>
+          <p>
+            The server password is sealed with AES-256-GCM under a key held in
+            the Android keystore. The key never leaves the device, and the
+            plaintext never reaches disk.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2 class="reveal-line" data-words>
+        Your machine keeps doing the work. The phone only decides what happens
+        next.
+      </h2>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="wrap">
+      <h2>Three steps to the first turn</h2>
+      <p class="section-lede">
+        The app is a client, so the server comes first. It takes about a minute,
+        and you only do it once per device.
+      </p>
+
+      <div class="steps">
+        <div class="step" data-reveal>
+          <span class="step-num">1</span>
+          <h3>Start the server</h3>
+          <p>It prints a URL, a password and a pairing code for this session.</p>
+          <pre><code><span class="c"># on the machine that runs the agent</span>
+opencode serve <span class="p">--hostname 0.0.0.0</span> --port 4096</code></pre>
+        </div>
+
+        <div class="step" data-reveal>
+          <span class="step-num">2</span>
+          <h3>Point the app at it</h3>
+          <p>
+            Scan the QR and the host and token are set at once, or type the LAN
+            address and password by hand. Codes are good for one use, for five
+            minutes.
           </p>
         </div>
-        <div class="shot">
-          <picture>
-          <source srcset="screens/settings.webp" type="image/webp" />
-          <img src="screens/settings.png" width="1080" height="2400" loading="lazy"
-               alt="Settings: the connected server, the theme choice and disconnect action" />
-          </picture>
+
+        <div class="step" data-reveal>
+          <span class="step-num">3</span>
+          <h3>Pick a session</h3>
+          <p>
+            Sessions open at the newest turn. Scroll up to page back through
+            history, filter to what is running, or start a new one in a chosen
+            project.
+          </p>
         </div>
       </div>
     </div>
   </section>
 
-  <hr class="rule" />
-
-  <section>
+  <section id="inside">
     <div class="wrap">
-      <h2>What it leaves out</h2>
+      <h2>Two screens carry the app</h2>
       <p class="section-lede">
-        This is a client for a server you run. It has no account, no sync, and no
-        cloud of its own.
+        Everything else is either the chat or a sheet that closes. No tabs to
+        learn, no dashboard, nothing to configure twice.
       </p>
 
-      <ul class="specs">
-        <li><span class="tick" aria-hidden="true">✓</span><span><strong>No account.</strong> Pair by scanning a code or entering the address and password your server prints.</span></li>
-        <li><span class="tick" aria-hidden="true">✓</span><span><strong>No traffic of its own.</strong> It talks to the host you gave it, on your LAN or through a tunnel you control.</span></li>
-        <li><span class="tick" aria-hidden="true">✓</span><span><strong>No plaintext credential.</strong> The server password is sealed with an AES-256-GCM key held in the Android keystore.</span></li>
-        <li><span class="tick" aria-hidden="true">✓</span><span><strong>No model of its own.</strong> The agent, model and reasoning effort come from your server.</span></li>
+      <div class="grid two block">
+        <figure class="shot" data-reveal>
+          <picture>
+            <source srcset="screens/sessions.webp" type="image/webp" />
+            <img src="screens/sessions.png" width="1080" height="2400" loading="lazy"
+                 alt="The session list, grouped by recency, with group and filter chips above it" />
+          </picture>
+          <figcaption>
+            <strong>Sessions, grouped and filtered.</strong> By project or by when
+            you last touched it, with a count per group and the running ones a
+            tap away.
+          </figcaption>
+        </figure>
+
+        <figure class="shot" data-reveal>
+          <picture>
+            <source srcset="screens/settings.webp" type="image/webp" />
+            <img src="screens/settings.png" width="1080" height="2400" loading="lazy"
+                 alt="Settings: the connected server, the dark theme switch and the disconnect action" />
+          </picture>
+          <figcaption>
+            <strong>Settings that fit on one screen.</strong> The server you are
+            on, the theme, and a disconnect that forgets the sealed password.
+          </figcaption>
+        </figure>
+      </div>
+
+      <ul class="facts block">
+        <li>
+          <svg class="tick" width="20" height="20" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+            <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/>
+          </svg>
+          <span><strong>No account.</strong> Pairing is a code your own server mints, not a sign up.</span>
+        </li>
+        <li>
+          <svg class="tick" width="20" height="20" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+            <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/>
+          </svg>
+          <span><strong>No traffic of its own.</strong> It talks to the host you gave it, on your LAN or through a tunnel you control.</span>
+        </li>
+        <li>
+          <svg class="tick" width="20" height="20" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+            <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/>
+          </svg>
+          <span><strong>No model of its own.</strong> The agent, the model and the reasoning effort all come from your server.</span>
+        </li>
+        <li>
+          <svg class="tick" width="20" height="20" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+            <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/>
+          </svg>
+          <span><strong>No plaintext credential.</strong> The password is sealed at rest and sent only to your server.</span>
+        </li>
       </ul>
     </div>
   </section>
 
-  <hr class="rule" />
-
-  <section id="install">
+  <section id="proof">
     <div class="wrap">
-      <h2>Install</h2>
+      <h2>The build is the proof</h2>
       <p class="section-lede">
-        Every release publishes a signed APK. There is no Play Store listing;
-        sideloading is the distribution model.
+        There are no customers to quote, because nobody is a customer. What you
+        can check instead is what the pipeline does on every release.
       </p>
 
-      <div class="install">
-        <div>
-          <pre><code><span class="c"># on your phone, with the APK downloaded</span>
-adb install -r <span class="p">opencode-mobile-v1.0.8.apk</span></code></pre>
-          <p class="meta">
-            Uninstall any earlier build first. Android rejects an update signed
-            with a different key.
+      <ul class="stats">
+        <li><b>271</b><span>unit tests on the data and reducer layers</span></li>
+        <li><b>7</b><span>themes, each a generated Material 3 scheme</span></li>
+        <li><b>24 MB</b><span>release APK, minified and signed in CI</span></li>
+        <li><b>0</b><span>analytics or crash SDKs in the dependency list</span></li>
+      </ul>
+
+      <p class="proof-note">
+        The release workflow refuses to publish an APK whose version code
+        disagrees with <code>version.properties</code>, or one that
+        <code>apksigner</code> will not verify.
+        <a class="quiet-link" href="https://github.com/yaffalhakim1/opencode-mobile/actions/workflows/release.yml">See the workflow</a>
+      </p>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap">
+      <h2>Questions before you sideload</h2>
+      <p class="section-lede">
+        The honest answers, including the one about the update that will not
+        install.
+      </p>
+
+      <div class="faq">
+        <article>
+          <h3>Do I need a server running already?</h3>
+          <p>
+            Yes. OpenCode Mobile is a client. It talks to an OpenCode server you
+            run yourself, on a laptop, a desktop or a home machine. Start it with
+            <code>opencode serve</code> and the app has something to connect to.
           </p>
-        </div>
+        </article>
 
-        <div>
-          <pre><code><span class="c"># on your machine, then scan the QR it prints</span>
-opencode serve --hostname 0.0.0.0 --port 4096
+        <article>
+          <h3>Does it work away from my home network?</h3>
+          <p>
+            Yes, if you expose the server yourself through a tunnel or a VPN. The
+            app only ever talks to the host you give it, so there is nothing in
+            the middle to configure.
+          </p>
+        </article>
 
-<span class="c"># or point the app at the printed URL and password</span></code></pre>
-        </div>
+        <article>
+          <h3>Where does the server password go?</h3>
+          <p>
+            It is sealed with AES-256-GCM under a key that lives in the Android
+            keystore and never leaves it. The sealed value sits in app storage,
+            and the password is only sent to your own server as Basic auth over
+            the connection.
+          </p>
+        </article>
+
+        <article>
+          <h3>Is there a Play Store version?</h3>
+          <p>
+            No. Every release publishes a signed APK on the Releases page and you
+            sideload it. A store listing would not help an app that is only
+            useful if you already run the server.
+          </p>
+        </article>
+
+        <article>
+          <h3>Why will the new APK not install over the old one?</h3>
+          <p>
+            The signing key was rotated at 1.0.7, so older builds carry a
+            different certificate and Android refuses the update. Uninstall the
+            old app once, then install normally.
+          </p>
+        </article>
+
+        <article>
+          <h3>Which Android versions are supported?</h3>
+          <p>
+            Android 8.0 (API 26) and newer. The app is Kotlin and Jetpack Compose,
+            built against API 36.
+          </p>
+        </article>
+
+        <article>
+          <h3>Does it send telemetry?</h3>
+          <p>
+            No analytics SDK, no crash reporting, no account, no push service. The
+            only network traffic is to the server you configured.
+          </p>
+        </article>
+
+        <article>
+          <h3>What happens when the connection drops?</h3>
+          <p>
+            The event feed is live only, so the client does not pretend it can
+            repair a gap. It applies the deltas it has, then refetches the message
+            history when the turn ends or the stream reconnects.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="final" data-reveal>
+        <h2>Your agent is already running. It is just at the wrong distance.</h2>
+        <p>
+          One signed APK, about 24 MB, no account and nothing to sign up for. If
+          the server is up, you are one pairing code away.
+        </p>
+        <a class="btn btn-primary" href="https://github.com/yaffalhakim1/opencode-mobile/releases/latest">
+          <svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+            <path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"/>
+          </svg>
+          Download the APK
+        </a>
       </div>
     </div>
   </section>
@@ -690,18 +1332,19 @@ opencode serve --hostname 0.0.0.0 --port 4096
 
 <footer>
   <div class="wrap">
-    <span>OpenCode Mobile</span>
+    <span>OpenCode Mobile · built for the server you already run</span>
     <nav aria-label="Footer">
       <a href="https://github.com/yaffalhakim1/opencode-mobile">GitHub</a>
       <a href="https://github.com/yaffalhakim1/opencode-mobile/releases">Releases</a>
       <a href="https://github.com/yaffalhakim1/opencode-mobile/blob/master/CHANGELOG.md">Changelog</a>
+      <a href="privacy.html">Privacy</a>
     </nav>
   </div>
 </footer>
 
 <script>
-  // The theme control. The page has already been themed by the script in the
-  // head, so this only has to flip it and remember the choice.
+  // The theme control. The head script already applied a theme, so this only
+  // flips it and remembers the choice.
   (function () {
     var toggle = document.getElementById('theme-toggle');
     if (!toggle) return;
@@ -717,20 +1360,73 @@ opencode serve --hostname 0.0.0.0 --port 4096
       var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
       document.documentElement.setAttribute('data-theme', next);
       label(next);
-      if (meta) meta.setAttribute('content', next === 'light' ? '#F7FBF8' : '#0B0F0C');
+      if (meta) meta.setAttribute('content', next === 'light' ? '#F7FBF8' : '#181818');
       try { localStorage.setItem('ocm-theme', next); } catch (e) { /* storage blocked */ }
     });
   })();
 
-  // Reveal on scroll. Gated on reduced motion, and degrades to visible if
-  // IntersectionObserver is unavailable rather than leaving content hidden.
+  // The island menu. The burger morphs into an X and the sheet expands over the
+  // page; links stagger in from below rather than appearing as a block.
   (function () {
-    var nodes = document.querySelectorAll('[data-reveal]');
-    if (!nodes.length) return;
+    var burger = document.getElementById('burger');
+    var sheet = document.getElementById('sheet');
+    if (!burger || !sheet) return;
 
+    // The page behind the sheet must not be reachable by Tab or a screen
+    // reader. The island stays out of this: it sits above the glass, and the
+    // burger in it is how the menu closes.
+    var behind = [
+      document.getElementById('main'),
+      document.querySelector('footer')
+    ].filter(Boolean);
+
+    function set(open) {
+      burger.setAttribute('aria-expanded', String(open));
+      burger.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+      sheet.setAttribute('data-open', String(open));
+      document.body.style.overflow = open ? 'hidden' : '';
+      behind.forEach(function (node) {
+        if (open) {
+          node.setAttribute('inert', '');
+        } else {
+          node.removeAttribute('inert');
+        }
+      });
+      // The sheet is display:none above the desktop breakpoint, so inert must
+      // follow the same rule or the links are focusable while invisible.
+      if (open) sheet.removeAttribute('inert');
+      else sheet.setAttribute('inert', '');
+    }
+
+    set(false);
+
+    burger.addEventListener('click', function () {
+      set(burger.getAttribute('aria-expanded') !== 'true');
+    });
+
+    sheet.addEventListener('click', function (e) {
+      if (e.target.closest('a')) set(false);
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') set(false);
+    });
+
+    // A resize past the desktop breakpoint leaves a locked body behind.
+    window.matchMedia('(min-width: 900px)').addEventListener('change', function (e) {
+      if (e.matches) set(false);
+    });
+  })();
+
+  // Reveal on scroll. Gated on reduced motion, and degrades to visible when
+  // IntersectionObserver is missing rather than leaving content hidden.
+  (function () {
     var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var nodes = document.querySelectorAll('[data-reveal]');
+
     if (reduce || !('IntersectionObserver' in window)) {
       nodes.forEach(function (n) { n.classList.add('in'); });
+      document.querySelectorAll('.tw').forEach(function (w) { w.classList.add('on'); });
       return;
     }
 
@@ -744,7 +1440,68 @@ opencode serve --hostname 0.0.0.0 --port 4096
 
     nodes.forEach(function (n) { io.observe(n); });
   })();
+
+  // The tagline. Each word is its own element and lights up as it crosses the
+  // trigger line, so the sentence resolves in reading order instead of flipping
+  // as one block.
+  (function () {
+    var line = document.querySelector('[data-words]');
+    if (!line) return;
+
+    var words = line.textContent.trim().split(/\s+/);
+    line.textContent = '';
+    var spans = words.map(function (word, i) {
+      var span = document.createElement('span');
+      span.className = 'tw';
+      span.textContent = word;
+      line.appendChild(span);
+      if (i < words.length - 1) line.appendChild(document.createTextNode(' '));
+      return span;
+    });
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) {
+      spans.forEach(function (s) { s.classList.add('on'); });
+      return;
+    }
+
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        e.target.classList.add('on');
+        io.unobserve(e.target);
+      });
+    }, { rootMargin: '100% 0px -35% 0px' });
+
+    spans.forEach(function (s) { io.observe(s); });
+  })();
+  // The nav marks the section you are in. Every section is observed, not just
+  // the linked ones: scrolling into a section with no link has to clear the
+  // marker, or it keeps pointing at whatever you left behind. The observation
+  // is on sections, not on scroll events, so nothing reflows per frame.
+  (function () {
+    var links = document.querySelectorAll('.pill-links a[href^="#"]');
+    if (!links.length || !('IntersectionObserver' in window)) return;
+
+    var byId = {};
+    links.forEach(function (link) { byId[link.getAttribute('href').slice(1)] = link; });
+
+    function clear() {
+      links.forEach(function (l) { l.removeAttribute('aria-current'); });
+    }
+
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        clear();
+        var link = byId[entry.target.id];
+        if (link) link.setAttribute('aria-current', 'true');
+      });
+    }, { rootMargin: '-45% 0px -45% 0px' });
+
+    document.querySelectorAll('main > section, main > .hero').forEach(function (s) { io.observe(s); });
+  })();
 </script>
 
 </body>
 </html>
+

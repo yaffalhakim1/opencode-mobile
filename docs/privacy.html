@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Privacy: OpenCode Mobile</title>
+<meta name="description" content="What OpenCode Mobile and this site do with your data. Short version: the app talks only to your server, and this site runs no analytics." />
+<link rel="canonical" href="https://yaffalhakim1.github.io/opencode-mobile/privacy.html" />
+<meta name="theme-color" id="theme-color" content="#181818" />
+<meta name="color-scheme" content="dark light" />
+<meta name="robots" content="index, follow" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23181818'/%3E%3Cpath d='M7 8h10v8H7z M9.5 10.5l2 1.5-2 1.5 M13.5 13.5h2.5' stroke='%2326E085' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400..500&display=swap" />
+<script>
+  (function () {
+    var root = document.documentElement;
+    root.className = 'js';
+    var theme = 'dark';
+    try {
+      var stored = localStorage.getItem('ocm-theme');
+      if (stored === 'light' || stored === 'dark') {
+        theme = stored;
+      } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+        theme = 'light';
+      }
+    } catch (e) { /* storage blocked */ }
+    root.setAttribute('data-theme', theme);
+    var meta = document.getElementById('theme-color');
+    if (meta) meta.setAttribute('content', theme === 'light' ? '#F7FBF8' : '#181818');
+  })();
+</script>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg:        #181818;  --bg:        light-dark(#F7FBF8, #181818);
+    --bg-soft:   #1F1F1F;  --bg-soft:   light-dark(#FFFFFF, #1F1F1F);
+    --line:      #313131;  --line:      light-dark(#C0C9C2, #313131);
+    --line-soft: #272727;  --line-soft: light-dark(#DCE5DE, #272727);
+    --fg:        #F2F2F2;  --fg:        light-dark(#171D19, #F2F2F2);
+    --fg-dim:    #A9A9A9;  --fg-dim:    light-dark(#404943, #A9A9A9);
+    --fg-faint:  #7C7C7C;  --fg-faint:  light-dark(#5F6A63, #7C7C7C);
+    --brand:     #26E085;  --brand:     light-dark(#00794A, #26E085);
+    --brand-mark:#26E085;  --brand-mark:light-dark(#00DA7D, #26E085);
+    --s-25: 2px; --s-50: 4px; --s-75: 8px; --s-100: 12px; --s-200: 16px;
+    --s-300: 24px; --s-400: 32px; --s-500: 40px; --s-600: 48px; --s-700: 64px;
+    --s-800: 80px; --s-900: 96px;
+    --r-sm: 4px; --r-lg: 8px; --r-xl: 12px; --r-2xl: 16px; --r-3xl: 24px; --r-full: 9999px;
+    --ease: cubic-bezier(0.32, 0.72, 0, 1);
+    --sans: "Geist", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  :root[data-theme="light"] { color-scheme: light; }
+  :root[data-theme="dark"] { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 400 16px/24px var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+  ::selection { background: var(--brand); color: #042315; }
+  :focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: var(--r-sm); }
+  .skip {
+    position: absolute; left: -9999px; top: 0;
+    background: var(--brand); color: #042315;
+    padding: var(--s-100) var(--s-200);
+    border-radius: 0 0 var(--r-xl) 0;
+    font-weight: 600; z-index: 100;
+  }
+  .skip:focus { left: 0; }
+  .wrap { width: 100%; max-width: 720px; margin-inline: auto; padding-inline: var(--s-300); }
+  header { padding-block: var(--s-600) var(--s-300); }
+  .back {
+    display: inline-flex; align-items: center; gap: var(--s-75);
+    font-size: 14px; line-height: 20px; font-weight: 600;
+    text-decoration: none; color: var(--fg-dim);
+    transition: color 140ms var(--ease);
+  }
+  .back:hover { color: var(--fg); }
+  h1 {
+    font-size: 30px; line-height: 36px; font-weight: 600; letter-spacing: -0.02em;
+    margin: var(--s-400) 0 var(--s-200); text-wrap: balance;
+  }
+  .lede { color: var(--fg-dim); margin: 0; }
+  main { padding-bottom: var(--s-700); }
+  h2 {
+    font-size: 18px; line-height: 28px; font-weight: 600;
+    margin: var(--s-500) 0 var(--s-75); text-wrap: balance;
+  }
+  p { margin: 0 0 var(--s-200); color: var(--fg-dim); text-wrap: pretty; }
+  strong { color: var(--fg); font-weight: 600; }
+  code { font: 400 14px/20px var(--mono); color: var(--fg); }
+  ul { margin: 0 0 var(--s-200); padding-left: var(--s-300); color: var(--fg-dim); }
+  li { margin-bottom: var(--s-75); }
+  .note {
+    padding: var(--s-300);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-2xl);
+    background: var(--bg-soft);
+    margin-block: var(--s-400);
+  }
+  .note p:last-child { margin-bottom: 0; }
+  footer {
+    padding-block: var(--s-600);
+    border-top: 1px solid var(--line-soft);
+    color: var(--fg-faint);
+    font-size: 14px; line-height: 20px;
+  }
+  footer nav { display: flex; flex-wrap: wrap; gap: var(--s-300); }
+  footer a { color: var(--fg-dim); text-decoration: none; }
+  footer a:hover { color: var(--fg); }
+  @media (min-width: 640px) {
+    h1 { font-size: 36px; line-height: 40px; }
+    header { padding-block: var(--s-800) var(--s-400); }
+  }
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<div class="wrap">
+  <header>
+    <a class="back" href="./">
+      <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+        <path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z" transform="rotate(180 128 128)"/>
+      </svg>
+      Back to the page
+    </a>
+    <h1>Privacy</h1>
+    <p class="lede">Last changed 25 October 2026. This covers the app and this website, which are the same project.</p>
+  </header>
+
+  <main id="main">
+    <h2>The app</h2>
+    <p>
+      OpenCode Mobile sends network requests to exactly one host: the OpenCode
+      server you configured. It has no analytics SDK, no crash reporting service,
+      no advertising identifier, and no account system. There is no OpenCode
+      Mobile backend for it to phone home to.
+    </p>
+    <p>The app stores three things on your device:</p>
+    <ul>
+      <li><strong>The server URL and password.</strong> The password is sealed with AES-256-GCM under a key generated in the Android keystore. The key is not exportable and does not leave the device.</li>
+      <li><strong>Your settings.</strong> Theme family, dark mode preference and the last project you opened, in app private storage.</li>
+      <li><strong>Cached session data.</strong> Nothing is cached beyond the current process except the settings above.</li>
+    </ul>
+    <p>
+      Uninstalling the app removes all of it, and the "Disconnect and forget
+      password" action in Settings removes the connection immediately.
+    </p>
+
+    <h2>What leaves your phone</h2>
+    <p>
+      Prompts, attachments, file paths you mention, and your server password as
+      Basic auth, all sent to the server you chose. If that server is reachable
+      from the internet, it is reachable because you made it so. Your prompts go
+      to whichever model provider your server is configured to use, under that
+      provider's terms, not ours.
+    </p>
+
+    <div class="note">
+      <p>
+        <strong>The one thing to be clear about.</strong> This app is a client. It
+        does not proxy, log or relay anything, so there is no copy of your work
+        anywhere but on your machine and wherever your model provider keeps it.
+      </p>
+    </div>
+
+    <h2>This website</h2>
+    <p>
+      The site is static files served by GitHub Pages. There are no cookies, no
+      analytics, no tracking pixels and no advertising. GitHub, as the host, sees
+      the requests needed to serve the page and applies its own
+      <a href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement">privacy statement</a>.
+    </p>
+    <p>
+      One local value is written to your browser: <code>ocm-theme</code> in
+      <code>localStorage</code>, which remembers whether you picked light or dark
+      mode. It never leaves your device and you can clear it from your browser
+      settings at any time.
+    </p>
+    <p>
+      The page loads the Geist typeface from Google Fonts, which means Google
+      receives your IP address and user agent when the font is fetched. That is
+      the only third party request the site makes. If that matters to you, the
+      page still reads correctly with the system font.
+    </p>
+
+    <h2>Downloads</h2>
+    <p>
+      The APK is hosted on GitHub Releases. Downloading it is a request to
+      GitHub, and their privacy statement applies to that request. The app is
+      signed, and the release workflow verifies the signature and the version
+      code before publishing.
+    </p>
+
+    <h2>Changes</h2>
+    <p>
+      If this policy changes, the date at the top changes with it. The history of
+      this file is public in the repository, so you can diff any revision against
+      the last.
+    </p>
+
+    <h2>Contact</h2>
+    <p>
+      Questions or a correction:
+      <a href="https://github.com/yaffalhakim1/opencode-mobile/issues">open an issue</a>
+      on the repository.
+    </p>
+  </main>
+
+  <footer>
+    <nav aria-label="Footer">
+      <a href="./">Home</a>
+      <a href="https://github.com/yaffalhakim1/opencode-mobile">GitHub</a>
+      <a href="https://github.com/yaffalhakim1/opencode-mobile/releases">Releases</a>
+    </nav>
+  </footer>
+</div>
+
+</body>
+</html>
