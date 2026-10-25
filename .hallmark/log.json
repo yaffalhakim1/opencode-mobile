@@ -1,0 +1,20 @@
+[
+ {
+  "shape": "Narrative Workflow",
+  "theme": "console",
+  "axes": "dark/grotesk-sans/chromatic-amber",
+  "hero": "Banner",
+  "nav": "masthead",
+  "footer": "letter close",
+  "imagery": "the product, captured",
+  "photos": 0,
+  "entry": "narrative-workflow",
+  "fingerprint": "console-graphite",
+  "sections": "Hero (the stream) · Turn · Decision · Desk and phone · What it will not do · Close · Footer",
+  "signature": "the stream, six real events arriving one at a time",
+  "waived": "79",
+  "prompt": "native Android client for a self hosted OpenCode agent server",
+  "date": "2026-10-25",
+  "mode": "build"
+ }
+]

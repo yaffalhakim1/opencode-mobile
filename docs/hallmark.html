@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<script>document.documentElement.classList.add('js');</script>
+
+<title>OpenCode Mobile: your agent’s turn, from the phone in your hand</title>
+<meta name="description" content="A native Android client for the OpenCode server on your own machine. The reply streams in, a tool call asks for your approval, and the turn carries on. 24 MB signed APK, MIT, no account." />
+<link rel="canonical" href="https://yaffalhakim1.github.io/opencode-mobile/" />
+<meta name="theme-color" content="#111417" />
+
+<meta property="og:type" content="website" />
+<meta property="og:title" content="OpenCode Mobile: your agent’s turn, from the phone in your hand" />
+<meta property="og:description" content="A native Android client for the OpenCode server on your own machine. The reply streams in, a tool call asks for your approval, the turn carries on." />
+<meta property="og:url" content="https://yaffalhakim1.github.io/opencode-mobile/" />
+<meta property="og:image" content="https://yaffalhakim1.github.io/opencode-mobile/screens/chat.png" />
+<meta property="og:image:alt" content="The chat screen: a streamed answer with reasoning and tool rows above it" />
+<meta property="og:site_name" content="OpenCode Mobile" />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="OpenCode Mobile" />
+<meta name="twitter:description" content="A native Android client for the OpenCode server on your own machine." />
+<meta name="twitter:image" content="https://yaffalhakim1.github.io/opencode-mobile/screens/chat.png" />
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='4' fill='%23111417'/%3E%3Cpath d='M7 8h10v8H7z M9.5 10.5l2 1.5-2 1.5 M13.5 13.5h2.5' stroke='%23E8A33D' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+
+<link rel="preload" href="fonts/host-grotesk.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="fonts/atkinson-mono.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="hallmark.css" />
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "OpenCode Mobile",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Android 8.0+",
+  "description": "A native Android client for a self hosted OpenCode server. The reply streams in, tool calls are approved from the phone, and the turn carries on.",
+  "url": "https://yaffalhakim1.github.io/opencode-mobile/",
+  "downloadUrl": "https://github.com/yaffalhakim1/opencode-mobile/releases/latest",
+  "softwareVersion": "1.0.14",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "license": "https://github.com/yaffalhakim1/opencode-mobile/blob/master/LICENSE"
+}
+</script>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<nav class="nav" aria-label="Sections">
+  <div class="container nav__inner">
+    <a class="nav__mark" href="./">OpenCode Mobile</a>
+    <div class="nav__links">
+      <a href="#turn">A turn</a>
+      <a href="#desk">Desk and phone</a>
+      
+      <a href="#limits">What it will not do</a>
+      <a href="https://github.com/yaffalhakim1/opencode-mobile">Source</a>
+    </div>
+  </div>
+</nav>
+
+<main id="main">
+
+  <header class="hero">
+    <div class="container hero__grid">
+      <div>
+        <h1>Your agent’s turn, in your pocket</h1>
+        <p class="hero__line">It talks to the server you already run. Nothing leaves your network.</p>
+
+        <div class="hero__actions">
+          <a class="btn" href="https://github.com/yaffalhakim1/opencode-mobile/releases/latest">
+            Download the APK
+          </a>
+          <a class="btn btn--quiet" href="#turn">See a turn</a>
+        </div>
+      </div>
+
+      <figure class="stream" aria-labelledby="stream-cap">
+        <div class="stream__bar">
+          <b id="stream-cap">A turn, while it runs</b>
+          <span>session/asking a question</span>
+        </div>
+        <ol class="stream__rows">
+          <li>
+            <span class="stream__time">00:00.4</span>
+            <span class="stream__what">prompt sent<span class="stream__who"> · you</span></span>
+            <span class="stream__kind">→</span>
+          </li>
+          <li>
+            <span class="stream__time">00:01.1</span>
+            <span class="stream__what">session.execution.started</span>
+            <span class="stream__kind">agent</span>
+          </li>
+          <li>
+            <span class="stream__time">00:02.8</span>
+            <span class="stream__what">session.reasoning.delta</span>
+            <span class="stream__kind">agent</span>
+          </li>
+          <li>
+            <span class="stream__time">00:04.2</span>
+            <span class="stream__what">session.tool.input.started</span>
+            <span class="stream__kind">agent</span>
+          </li>
+          <li>
+            <span class="stream__time">00:04.9</span>
+            <span class="stream__what">permission.asked</span>
+            <span class="stream__kind">you</span>
+          </li>
+          <li data-live>
+            <span class="stream__time">00:06.0</span>
+            <span class="stream__what">session.text.delta<span class="stream__cursor" aria-hidden="true"></span></span>
+            <span class="stream__kind">streaming</span>
+          </li>
+        </ol>
+        <figcaption class="stream__foot">
+          The events are the server’s own names, in the order this client handles them.
+        </figcaption>
+      </figure>
+    </div>
+  </header>
+
+  <section class="stage" id="turn" aria-labelledby="turn-head">
+    <div class="container">
+      <div class="stage__head">
+        <h2 id="turn-head">1. The turn arrives as it is written</h2>
+      </div>
+      <div class="stage__body">
+        <div>
+          <p class="stage__note">
+            Text, reasoning and tool calls share one panel, hairline parted, so a
+            long run stays compact.
+          </p>
+          <p class="stage__note">
+            It streams while the app is backgrounded: you come back to the answer,
+            not a spinner.
+          </p>
+        </div>
+        <figure class="capture">
+          <figure>
+            <img src="screens/chat.png" width="1080" height="2400"
+                 alt="The chat screen: a streamed answer with reasoning and tool rows grouped above it" />
+            <figcaption>A turn: reasoning and tool rows, then the prose.</figcaption>
+          </figure>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage" aria-labelledby="ask-head">
+    <div class="container">
+      <div class="stage__head">
+        <h2 id="ask-head">2. When it needs a decision, the turn stops</h2>
+      </div>
+      <div class="stage__body">
+        <div>
+          <p class="stage__note">
+            A question or permission request arrives as a card with its real
+            choices.
+          </p>
+          <p class="stage__note">
+            Answer it and the turn carries on from where it paused.
+          </p>
+        </div>
+        <figure class="capture">
+          <figure>
+            <img src="screens/chat.png" width="1080" height="2400" loading="lazy"
+                 alt="The chat screen with a question card offering its choices" />
+            <figcaption>The question, in the conversation where it happened.</figcaption>
+          </figure>
+          <figure>
+            <img src="screens/settings.png" width="1080" height="2400" loading="lazy"
+                 alt="Settings: the connected server address, the dark theme switch, and a disconnect action" />
+            <figcaption>The server it talks to, and a disconnect that forgets the sealed password.</figcaption>
+          </figure>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage" id="desk" aria-labelledby="desk-head">
+    <div class="container">
+      <div class="stage__head">
+        <h2 id="desk-head">3. The same question, answered at the desk or from the sofa</h2>
+      </div>
+
+      <div class="compare">
+        <div class="compare__side" data-was>
+          <h3>At the desk</h3>
+          <ol class="compare__rows">
+            <li><time>0:00</time><span>It asks which file.</span></li>
+            <li><time>4:00</time><span>You notice.</span></li>
+            <li><time>4:30</time><span>You walk back.</span></li>
+          </ol>
+          <p class="compare__total">Waits 4 minutes.</p>
+        </div>
+
+        <div class="compare__side" data-now>
+          <h3>With the phone</h3>
+          <ol class="compare__rows">
+            <li><time>0:00</time><span>It asks which file.</span></li>
+            <li><time>0:20</time><span>You answer from the sofa.</span></li>
+            <li><time>0:21</time><span>The turn carries on.</span></li>
+          </ol>
+          <p class="compare__total">Waits 20 seconds.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage" id="limits" aria-labelledby="limits-head">
+    <div class="container">
+      <div class="stage__head">
+        <h2 id="limits-head">4. What the client will not do</h2>
+      </div>
+
+      <ul class="rows">
+        <li>
+          <b>No account</b>
+          <span>A code your own server mints.</span>
+        </li>
+        <li>
+          <b>No traffic of its own</b>
+          <span>Your LAN, or a tunnel you control.</span>
+        </li>
+        <li>
+          <b>No plaintext credential</b>
+          <span>AES-256-GCM under a key in the Android keystore.</span>
+        </li>
+        <li>
+          <b>No analytics</b>
+          <span>No crash reporting, no ad identifier, no push.</span>
+        </li>
+        <li>
+          <b>No model of its own</b>
+          <span>The agent, the model and the effort come from your server.</span>
+        </li>
+        <li>
+          <b>No Play Store listing</b>
+          <span>A signed APK per release, sideloaded.</span>
+        </li>
+      </ul>
+
+      <figure class="capture capture--wide">
+        <figure>
+          <img src="screens/chat.png" width="1080" height="2400" loading="lazy"
+               alt="A finished turn in the chat, with the reasoning and tool rows folded into one panel above the prose" />
+          <figcaption>What the client sends is a prompt and a choice. The rest is your server.</figcaption>
+        </figure>
+      </figure>
+    </div>
+  </section>
+
+  <section class="close" aria-labelledby="close-head">
+    <div class="container close__grid">
+      <div>
+        <h2 id="close-head">Your server is already running</h2>
+        <p class="lead close__line">
+          One signed APK, 24 MB. Uninstall any build older than 1.0.7 first: the
+          signing key was rotated, and Android will refuse the update otherwise.
+        </p>
+        <div class="close__actions">
+          <a class="btn" href="https://github.com/yaffalhakim1/opencode-mobile/releases/latest">
+            Download the APK
+          </a>
+          <a class="btn btn--quiet" href="https://github.com/yaffalhakim1/opencode-mobile/blob/master/CHANGELOG.md">
+            What changed
+          </a>
+        </div>
+
+        <p class="install">
+          <span>then</span>
+          <code>adb install -r opencode-mobile-v1.0.14.apk</code>
+        </p>
+
+        <p class="hero__facts">
+          <span><b>24 MB</b> signed</span>
+          <span><b>271</b> tests</span>
+          <span><b>MIT</b> licensed</span>
+          <span><b>Android 8.0+</b></span>
+        </p>
+      </div>
+
+      <figure class="capture">
+        <figure>
+          <img src="screens/sessions.png" width="1080" height="2400" loading="lazy"
+               alt="The session list with a running session marked by a dot beside its title" />
+          <figcaption>A session list on a working day.</figcaption>
+        </figure>
+      </figure>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <div class="container">
+    <p class="foot__close">
+      The machine does the work. The phone only decides what happens next.
+    </p>
+    <div class="foot__meta">
+      <span>OpenCode Mobile 1.0.14</span>
+      <a href="https://github.com/yaffalhakim1/opencode-mobile">Source</a>
+      <a href="https://github.com/yaffalhakim1/opencode-mobile/releases">Releases</a>
+      <a href="https://github.com/yaffalhakim1/opencode-mobile/blob/master/CHANGELOG.md">Changelog</a>
+      <a href="privacy.html">Privacy</a>
+      <span>MIT licensed</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
