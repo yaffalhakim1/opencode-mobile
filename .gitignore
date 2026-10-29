@@ -34,3 +34,23 @@ keystore.properties
 # colour schemes are only reproducible if the thing that produced them is too.
 # Its dependencies are not.
 tools/theme-gen/node_modules/
+
+# Docs books
+#
+# The learn, pocket and app books are built locally (build.mjs writes their
+# HTML from the markdown beside it). They are drafts, so they stay off the repo
+# until they are worth publishing.
+docs/app/
+docs/learn/
+docs/pocket/
+
+# Local tool state
+.hallmark/
+
+# Firebase
+#
+# This repository is public. The client key in google-services.json is not a
+# secret in the sense that it can sign anything, but it is an API key tied to
+# one Firebase project, and committing it hands every reader a quota to burn.
+# The release workflow does not use it; push notifications are not wired yet.
+app/google-services.json
