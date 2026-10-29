@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +43,15 @@ fun ToolRow(
         ToolStatus.Failed -> MaterialTheme.colorScheme.error
     }
 
+    // How much came back, without a tap. Counted once per result: a long build
+    // log is tens of thousands of characters, and this row recomposes whenever
+    // the run above it does.
+    val outputLines = remember(tool.output) {
+        tool.output
+            ?.takeIf { it.isNotBlank() }
+            ?.let { text -> text.count { it == '\n' } + 1 }
+    }
+
     DisclosureRow(
         title = tool.summaryLabel(),
         expanded = expanded,
@@ -62,10 +72,22 @@ fun ToolRow(
                 )
             }
         },
-        trailing = if (tool.status == ToolStatus.Failed) {
-            { StatusPill(text = tool.status.label(), color = tint) }
-        } else {
-            null
+        trailing = when {
+            tool.status == ToolStatus.Failed -> {
+                { StatusPill(text = tool.status.label(), color = tint) }
+            }
+
+            outputLines != null -> {
+                {
+                    Text(
+                        text = if (outputLines == 1) "1 line" else "$outputLines lines",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            else -> null
         },
     ) {
         Column(

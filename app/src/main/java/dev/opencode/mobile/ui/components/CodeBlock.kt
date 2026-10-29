@@ -189,32 +189,3 @@ fun StatusPill(
         )
     }
 }
-
-/**
- * The one card surface used by reasoning and tool calls.
- *
- * Both are "the agent did something" rows, so they share a container, a border
- * and a header rhythm; only the leading glyph and status pill differ. Keeping
- * the surface in one place is what stops the two from drifting apart again.
- */
-/**
- * The one card a run of activity collapses into.
- *
- * Borderless on purpose: the reference design separates rows with hairlines
- * inside a single tinted panel, and an outline around every card made a long run
- * look like a stack of boxes.
- */
-@Composable
-fun AgentActivityCard(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.extendedColors.cardSurface, MaterialTheme.shapes.medium)
-            .padding(horizontal = 12.dp, vertical = 2.dp),
-    ) {
-        content()
-    }
-}

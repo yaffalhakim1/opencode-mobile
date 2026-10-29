@@ -11,8 +11,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.opencode.mobile.data.chat.AssistantBlock
@@ -53,7 +54,18 @@ fun UserMessage(
         Box(
             modifier = Modifier
                 .widthIn(max = 320.dp)
-                .background(MaterialTheme.extendedColors.userBubble, MaterialTheme.shapes.large)
+                // One corner squared: 16dp everywhere is a card, and the tight
+                // top-right is what makes it read as something spoken by the
+                // person on this side of the conversation.
+                .background(
+                    MaterialTheme.extendedColors.userBubble,
+                    RoundedCornerShape(
+                        topStart = 16.dp,
+                        topEnd = 4.dp,
+                        bottomEnd = 16.dp,
+                        bottomStart = 16.dp,
+                    ),
+                )
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
             MarkdownText(
@@ -123,29 +135,46 @@ fun AssistantMessage(
     }
 }
 
+/**
+ * A step that stopped.
+ *
+ * The disc is filled and the label is the loudest text in the transcript on
+ * purpose: everything else in this column is work that finished, and the one
+ * thing a reader must not scroll past is the thing that did not.
+ */
 @Composable
 private fun ErrorRow(message: String) {
+    val scheme = MaterialTheme.colorScheme
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                MaterialTheme.colorScheme.errorContainer,
-                MaterialTheme.shapes.medium,
+            .panel(
+                fill = scheme.errorContainer,
+                border = scheme.error.copy(alpha = 0.25f),
+                shape = MaterialTheme.shapes.medium,
             )
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.Top,
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            imageVector = Glyphs.Alert,
-            contentDescription = null,
-            modifier = Modifier.size(18.dp),
-            tint = MaterialTheme.colorScheme.onErrorContainer,
-        )
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .background(scheme.error, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Glyphs.Alert,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = scheme.onError,
+            )
+        }
         Text(
             text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onErrorContainer,
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+            color = scheme.onErrorContainer,
         )
     }
 }
@@ -240,31 +269,54 @@ private fun TextBlock(block: AssistantBlock.Text) {
 }
 
 /**
- * The single card a run of reasoning and tool calls collapses into.
+ * The activity rows of a run.
  *
- * Rows are separated by a hairline instead of their own borders, which is what
- * keeps a long run short.
+ * One card per row, not one card for the run. A hairline inside a single panel
+ * made six steps read as a table of contents, and it left the row still running
+ * looking exactly like the five that had already finished — the one distinction
+ * this list exists to carry.
  */
 @Composable
 private fun ActivityCard(
     blocks: List<AssistantBlock>,
     onToggleReasoning: (String, Int) -> Unit,
 ) {
-    AgentActivityCard {
-        blocks.forEachIndexed { index, block ->
-            if (index > 0) {
-                // Faint on purpose: the divider is a hint that these rows are
-                // separate, not a line the eye should stop on.
-                HorizontalDivider(
-                    color = MaterialTheme.extendedColors.cardBorder.copy(alpha = 0.45f),
-                )
-            }
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        blocks.forEach { block ->
             when (block) {
-                is AssistantBlock.Reasoning -> ReasoningRow(block, onToggleReasoning)
-                is AssistantBlock.Tool -> ToolRow(block)
+                is AssistantBlock.Reasoning -> ActivityRowCard {
+                    ReasoningRow(block, onToggleReasoning)
+                }
+
+                is AssistantBlock.Tool -> ActivityRowCard { ToolRow(block) }
                 is AssistantBlock.Text -> Unit
             }
         }
+    }
+}
+
+/**
+ * The surface one activity row sits on.
+ *
+ * Horizontal padding only: the row's own vertical padding sets its height, so the
+ * card adds a frame rather than air, and a run of steps stays a compact log.
+ */
+@Composable
+private fun ActivityRowCard(content: @Composable () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .panel(
+                fill = MaterialTheme.extendedColors.cardSurface,
+                border = MaterialTheme.extendedColors.cardBorder.copy(alpha = 0.7f),
+                shape = MaterialTheme.shapes.medium,
+            )
+            .padding(horizontal = 14.dp, vertical = 2.dp),
+    ) {
+        content()
     }
 }
 

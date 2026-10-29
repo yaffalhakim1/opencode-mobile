@@ -7,6 +7,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -102,7 +104,7 @@ fun ChatComposer(
         modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         // While a turn is running the prompt has somewhere to go. Saying which
@@ -135,7 +137,7 @@ fun ChatComposer(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 52.dp, max = 160.dp),
+                        .heightIn(min = 48.dp, max = 160.dp),
                     enabled = enabled,
                     placeholder = {
                         Text(
@@ -149,11 +151,14 @@ fun ChatComposer(
                     maxLines = 6,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
                     keyboardActions = KeyboardActions(),
+                    // Grey until it has the caret, then the page's own surface:
+                    // the field says which of the two things on this bar is
+                    // taking input, without a second outline to notice.
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                        focusedBorderColor = MaterialTheme.colorScheme.outline,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                         cursorColor = MaterialTheme.extendedColors.brand,
                     ),
                 )
@@ -178,21 +183,25 @@ fun ChatComposer(
                             FilledIconButton(
                                 onClick = onSend,
                                 enabled = canSend,
-                                modifier = Modifier.size(52.dp),
+                                modifier = Modifier.size(44.dp),
+                                shape = CircleShape,
                                 colors = IconButtonDefaults.filledIconButtonColors(
                                     containerColor = MaterialTheme.colorScheme.primary,
                                     contentColor = MaterialTheme.colorScheme.onPrimary,
+                                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                 ),
                             ) {
                                 Icon(
                                     imageVector = Glyphs.Send,
                                     contentDescription = "Queue prompt",
-                                    modifier = Modifier.size(22.dp),
+                                    modifier = Modifier.size(20.dp),
                                 )
                             }
                             FilledIconButton(
                                 onClick = onStop,
-                                modifier = Modifier.size(52.dp),
+                                modifier = Modifier.size(44.dp),
+                                shape = CircleShape,
                                 colors = IconButtonDefaults.filledIconButtonColors(
                                     containerColor = MaterialTheme.colorScheme.errorContainer,
                                     contentColor = MaterialTheme.colorScheme.onErrorContainer,
@@ -201,7 +210,7 @@ fun ChatComposer(
                                 Icon(
                                     imageVector = Glyphs.Stop,
                                     contentDescription = "Stop the agent",
-                                    modifier = Modifier.size(22.dp),
+                                    modifier = Modifier.size(20.dp),
                                 )
                             }
                         }
@@ -209,12 +218,21 @@ fun ChatComposer(
                         FilledIconButton(
                             onClick = onSend,
                             enabled = canSend,
-                            modifier = Modifier.size(52.dp),
+                            modifier = Modifier.size(44.dp),
+                            shape = CircleShape,
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                                // An empty field is not a disabled app: the button
+                                // stays legible so it reads as "send", not as gone.
+                                disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
                         ) {
                             Icon(
                                 imageVector = Glyphs.Send,
                                 contentDescription = "Send prompt",
-                                modifier = Modifier.size(22.dp),
+                                modifier = Modifier.size(20.dp),
                             )
                         }
                     }
@@ -226,16 +244,28 @@ fun ChatComposer(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            IconButton(
-                onClick = onAttach,
-                enabled = enabled && !isRunning,
-                modifier = Modifier.size(32.dp),
+            // Outlined rather than bare: at 32dp a glyph with no edge reads as
+            // part of the field above it instead of a target of its own.
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        shape = CircleShape,
+                    )
+                    .clickable(enabled = enabled && !isRunning, onClick = onAttach),
+                contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = Glyphs.Add,
                     contentDescription = "Attach a file",
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp),
+                    tint = if (enabled && !isRunning) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                    },
                 )
             }
 
@@ -245,14 +275,15 @@ fun ChatComposer(
             Row(
                 modifier = Modifier
                     .weight(1f)
-                    .background(
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                        RoundedCornerShape(10.dp),
+                    .panel(
+                        fill = MaterialTheme.extendedColors.cardSurface,
+                        border = MaterialTheme.colorScheme.outlineVariant,
+                        shape = MaterialTheme.shapes.extraLarge,
                     )
                     .clickable(enabled = enabled && !isRunning, onClick = onOpenSelector)
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Icon(
                     imageVector = Glyphs.Tune,
