@@ -1,5 +1,36 @@
 # Changelog
 
+## [1.0.15]
+
+### Android
+
+- **Fixed: the agent's work was one grey wall, so you could not tell what was
+  still running.** Every reasoning step and tool call in a turn sat inside a
+  single panel separated by hairlines, which left the step in flight looking
+  exactly like the five that had already finished. Each step is its own card now,
+  and a step that stopped says so in the one red surface on the screen.
+
+- **Fixed: a tool call gave no clue how much it returned.** Expanding it was the
+  only way to find out whether it was three lines or three hundred. The row now
+  states the count before you tap.
+
+- **Search is always there, and the filters take one row instead of two.** The
+  list used to hide search behind a toolbar toggle and spend its first two rows
+  on Material chips, so the first session sat below the fold. Both are now one
+  scrolling strip under a permanent field.
+
+- **You can pin a session to the top.** Long-press a row. Pins are kept on the
+  phone, so they survive a restart and do not depend on the server.
+
+- **The agent sheet is three choices instead of twenty loose rows.** Agent,
+  effort and model each sit in their own card with the title held in place while
+  the model list scrolls, and the chosen row carries both a fill and a tick.
+
+- **Settings shows its own theme.** Each palette is painted in its own colours,
+  in the mode currently in effect, so the choice is made by looking at it rather
+  than by reading its name. The connected server is stated on the screen instead
+  of being implied.
+
 ## [1.0.14]
 
 ### Android
