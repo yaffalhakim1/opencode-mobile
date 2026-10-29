@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,9 +14,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,9 +32,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.opencode.mobile.core.net.HttpClientFactory
+import dev.opencode.mobile.core.net.ServerConnection
 import dev.opencode.mobile.data.settings.ThemeChoice
 import dev.opencode.mobile.ui.components.Glyphs
+import dev.opencode.mobile.ui.components.panel
 import dev.opencode.mobile.ui.theme.CodeType
+import dev.opencode.mobile.ui.theme.ThemeFamily
+import dev.opencode.mobile.ui.theme.extendedColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,20 +49,31 @@ fun SettingsScreen(
     onDisconnected: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    // Previews use the mode actually in effect, so a pinned dark theme does not
+    // show its light set on a light phone.
+    val dark = state.theme.isDark(isSystemInDarkTheme())
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Glyphs.Back, contentDescription = "Back")
-                    }
-                },
-                title = { Text("Settings", style = MaterialTheme.typography.titleLarge) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
-            )
+            Column {
+                TopAppBar(
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Glyphs.ArrowLeft, contentDescription = "Back")
+                        }
+                    },
+                    title = { Text("Settings", style = MaterialTheme.typography.titleLarge) },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ),
+                )
+                // The bar and the page are the same colour, so a hairline is what
+                // tells the two apart once the body scrolls under the title.
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                )
+            }
         },
     ) { innerPadding ->
         Column(
@@ -64,174 +81,180 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+                .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            SectionLabel("Server")
+            ServerSection(connection = state.connection)
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), MaterialTheme.shapes.medium)
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text = state.connection?.baseUrl ?: "Not connected",
-                    style = CodeType.block,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = "Authenticated as opencode",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            Spacer(Modifier.height(12.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-            Spacer(Modifier.height(12.dp))
-
-            SectionLabel("Appearance")
-
-            SettingRow(
-                title = "Theme",
-                subtitle = when (state.theme) {
-                    ThemeChoice.System -> "Following the system setting"
-                    ThemeChoice.Dark -> "Always dark"
-                    ThemeChoice.Light -> "Always light"
-                },
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    ThemeChoice.entries.forEach { choice ->
-                        FilterChip(
-                            selected = state.theme == choice,
-                            onClick = { viewModel.setTheme(choice) },
-                            label = {
-                                Text(
-                                    text = when (choice) {
-                                        ThemeChoice.System -> "System"
-                                        ThemeChoice.Dark -> "Dark"
-                                        ThemeChoice.Light -> "Light"
-                                    },
-                                    style = MaterialTheme.typography.labelMedium,
-                                )
-                            },
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            // The palette is a separate choice from the mode: a theme supplies
-            // both a light and a dark set, so picking one does not pin the other.
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text = "Palette",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = "Colours for the whole app. Each is shown in the mode in effect.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            Spacer(Modifier.height(4.dp))
-
-            ThemeFamilyPicker(
-                selected = state.family,
-                // Previews use the mode actually in effect, so a pinned dark
-                // theme does not show its light set on a light phone.
-                dark = state.theme.isDark(isSystemInDarkTheme()),
-                onSelect = viewModel::setFamily,
+            AppearanceSection(
+                theme = state.theme,
+                family = state.family,
+                dark = dark,
+                onTheme = viewModel::setTheme,
+                onFamily = viewModel::setFamily,
             )
 
-            Spacer(Modifier.height(24.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-            Spacer(Modifier.height(16.dp))
+            DisconnectRow(
+                disconnecting = state.disconnecting,
+                onClick = { viewModel.disconnect(onDisconnected) },
+            )
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
-                        MaterialTheme.shapes.medium,
-                    )
-                    .clickable(enabled = !state.disconnecting) {
-                        viewModel.disconnect(onDisconnected)
-                    }
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Icon(
-                    imageVector = Glyphs.Power,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onErrorContainer,
-                )
-                Text(
-                    text = if (state.disconnecting) "Disconnecting…" else "Disconnect and forget password",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                )
-            }
-
-            Spacer(Modifier.height(24.dp))
             Text(
                 text = "The server password is stored encrypted with a key held in this device's keystore.",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.height(32.dp))
         }
     }
 }
 
 @Composable
-private fun SectionLabel(text: String) {
-    Text(
-        text = text.uppercase(),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 8.dp),
-    )
+private fun ServerSection(connection: ServerConnection?) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SettingsSectionLabel("Server")
+        ServerCard(connection)
+    }
+}
+
+/**
+ * The address, and whether it is answering.
+ *
+ * Read-only on purpose: the address is not editable here because three things
+ * are keyed to it (the cached HTTP client, the view-model keys and the open event
+ * stream). Changing server means disconnecting, which clears all three at once.
+ */
+@Composable
+private fun ServerCard(connection: ServerConnection?) {
+    val scheme = MaterialTheme.colorScheme
+    val connected = connection != null
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .panel(
+                fill = scheme.surfaceContainerLow,
+                border = scheme.outlineVariant.copy(alpha = 0.6f),
+                shape = MaterialTheme.shapes.large,
+            )
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = connection?.baseUrl ?: "No server connected",
+            style = CodeType.block,
+            color = scheme.onSurface,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+        )
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            // The dot is not the only signal: the line beside it says the same
+            // thing in words, so the state survives a colour-blind reading.
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .background(
+                        color = if (connected) {
+                            MaterialTheme.extendedColors.success
+                        } else {
+                            scheme.onSurfaceVariant
+                        },
+                        shape = CircleShape,
+                    ),
+            )
+            Text(
+                text = if (connected) {
+                    "Authenticated as ${HttpClientFactory.USERNAME}"
+                } else {
+                    "Pair again to reconnect"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = scheme.onSurfaceVariant,
+            )
+        }
+    }
 }
 
 @Composable
-private fun SettingRow(
-    title: String,
-    subtitle: String,
-    trailing: @Composable () -> Unit = {},
+private fun AppearanceSection(
+    theme: ThemeChoice,
+    family: ThemeFamily,
+    dark: Boolean,
+    onTheme: (ThemeChoice) -> Unit,
+    onFamily: (ThemeFamily) -> Unit,
 ) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SettingsSectionLabel("Appearance")
+
+        ThemeCard(theme = theme, dark = dark, onTheme = onTheme)
+
+        Spacer(Modifier.height(4.dp))
+
+        // The palette is a separate choice from the mode: a theme supplies both a
+        // light and a dark set, so picking one does not pin the other.
+        SettingsHeading(
+            title = "Palette",
+            subtitle = "Colours for the whole app. Each is shown in the mode in effect.",
+        )
+
+        ThemeFamilyPicker(selected = family, dark = dark, onSelect = onFamily)
+    }
+}
+
+@Composable
+private fun ThemeCard(
+    theme: ThemeChoice,
+    dark: Boolean,
+    onTheme: (ThemeChoice) -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .panel(
+                fill = scheme.surface,
+                border = scheme.outlineVariant.copy(alpha = 0.8f),
+                shape = MaterialTheme.shapes.large,
+            )
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        SettingsHeading(title = "Theme", subtitle = theme.subtitle)
+        ThemeModeSegmented(selected = theme, dark = dark, onSelect = onTheme)
+    }
+}
+
+@Composable
+private fun DisconnectRow(disconnecting: Boolean, onClick: () -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            .panel(
+                fill = scheme.errorContainer.copy(alpha = 0.45f),
+                border = scheme.error.copy(alpha = 0.25f),
+                shape = MaterialTheme.shapes.large,
             )
-        }
-        trailing()
+            .clickable(enabled = !disconnecting, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(
+            imageVector = Glyphs.Power,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = scheme.onErrorContainer,
+        )
+        Text(
+            text = if (disconnecting) "Disconnecting…" else "Disconnect and forget password",
+            style = MaterialTheme.typography.labelLarge,
+            color = scheme.onErrorContainer,
+        )
     }
 }

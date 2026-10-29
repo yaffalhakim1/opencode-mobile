@@ -136,7 +136,7 @@ fun AppRoot(
                     SessionListScreen(
                         viewModel = viewModel(
                             key = "sessions-${active.baseUrl}",
-                            factory = sessionsFactory(active),
+                            factory = sessionsFactory(active, settingsStore),
                         ),
                         onOpenSession = { id, title, agent, modelKey, directory ->
                             route = Route.Chat(id, title, agent, modelKey, directory)
@@ -234,10 +234,11 @@ private fun connectFactory(store: ConnectionStore) = viewModelFactory {
     ConnectViewModel(store)
 }
 
-private fun sessionsFactory(connection: ServerConnection) = viewModelFactory {
+private fun sessionsFactory(connection: ServerConnection, settings: SettingsStore) = viewModelFactory {
     SessionListViewModel(
         api = OpenCodeApi(connection, HttpClientFactory.create(connection)),
         events = EventStream(connection),
+        settings = settings,
     )
 }
 

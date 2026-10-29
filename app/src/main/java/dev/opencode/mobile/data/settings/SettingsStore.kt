@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dev.opencode.mobile.ui.theme.ThemeFamily
 import kotlinx.coroutines.flow.Flow
@@ -56,9 +57,39 @@ class SettingsStore(private val context: Context) {
         }
     }
 
+    /**
+     * Sessions the user pinned.
+     *
+     * Pinning is a local decision — the server has no field for it — so it is
+     * stored here as a set of session ids. An id that no longer exists on the
+     * server simply matches nothing, which is why a stale pin is harmless and
+     * does not need pruning.
+     */
+    val pinnedSessions: Flow<Set<String>> = context.settingsDataStore.data.map { preferences ->
+        preferences[PINNED_KEY].orEmpty()
+    }
+
+    /**
+     * Flips one pin and writes the whole set.
+     *
+     * Read-modify-write inside `edit { }` is atomic on DataStore's own
+     * dispatcher, so two quick taps on different rows cannot lose one of them.
+     */
+    suspend fun togglePinned(sessionID: String) {
+        context.settingsDataStore.edit { preferences ->
+            val current = preferences[PINNED_KEY].orEmpty()
+            preferences[PINNED_KEY] = if (sessionID in current) {
+                current - sessionID
+            } else {
+                current + sessionID
+            }
+        }
+    }
+
     private companion object {
         val THEME_KEY = stringPreferencesKey("theme")
         val FAMILY_KEY = stringPreferencesKey("theme_family")
+        val PINNED_KEY = stringSetPreferencesKey("pinned_sessions")
     }
 }
 

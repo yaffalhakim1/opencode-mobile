@@ -1,7 +1,9 @@
 package dev.opencode.mobile.ui.sessions
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,10 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -22,19 +22,24 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.opencode.mobile.data.remote.dto.SessionDto
 import dev.opencode.mobile.ui.components.Glyphs
+import dev.opencode.mobile.ui.components.panel
+import dev.opencode.mobile.ui.theme.CodeType
 import dev.opencode.mobile.ui.theme.extendedColors
+
 @Composable
 internal fun LoadMoreRow(loading: Boolean, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = !loading, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 4.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -42,18 +47,17 @@ internal fun LoadMoreRow(loading: Boolean, onClick: () -> Unit) {
             CircularProgressIndicator(
                 modifier = Modifier.size(14.dp),
                 strokeWidth = 2.dp,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Text(
             text = if (loading) "Loading…" else "Load older sessions",
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
 
-/** Shows how many rows a section hides behind "See more". */
 /**
  * Shown when the event feed is down, so a stale list is not mistaken for a
  * quiet one.
@@ -63,8 +67,12 @@ internal fun LiveUpdatesPausedBanner(onRetry: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.secondaryContainer)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .panel(
+                fill = MaterialTheme.colorScheme.secondaryContainer,
+                border = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                shape = MaterialTheme.shapes.large,
+            )
+            .padding(start = 14.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -91,69 +99,107 @@ internal fun SeeMoreRow(hidden: Int, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(start = 4.dp, top = 4.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(
             text = "See $hidden more",
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Icon(
             imageVector = Glyphs.ChevronDown,
             contentDescription = null,
             modifier = Modifier.size(16.dp),
-            tint = MaterialTheme.colorScheme.primary,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
 
 @Composable
-internal fun SectionHeader(title: String, count: Int) {    Row(
+internal fun SectionHeader(title: String, count: Int) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 12.dp, bottom = 2.dp, start = 4.dp),
+            .padding(start = 4.dp, top = 8.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
             text = count.toString(),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
         )
     }
 }
 
+/**
+ * One session.
+ *
+ * Tap opens it, long-press pins it. Pinning has no glyph of its own until it is
+ * on, which is why a pinned row carries a pin next to its title: the state has to
+ * be visible somewhere, and a permanent pin button on every row would be a second
+ * target competing with the delete X.
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun SessionRow(
     session: SessionDto,
     running: Boolean,
+    pinned: Boolean,
     onClick: () -> Unit,
+    onTogglePin: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val scheme = MaterialTheme.colorScheme
+    val haptics = LocalHapticFeedback.current
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), MaterialTheme.shapes.medium)
-            .clickable(onClick = onClick)
-            // 10dp vertical, not 14: rows are a scannable index, and five per
-            // section has to fit without the card dominating the screen.
-            .padding(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+            .panel(
+                fill = scheme.surfaceContainerHigh,
+                border = scheme.outlineVariant.copy(alpha = 0.35f),
+                shape = MaterialTheme.shapes.large,
+            )
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    // The press has to be felt, because the result is a state
+                    // change in a list that may be off-screen behind the finger.
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onTogglePin()
+                },
+            )
+            .padding(start = 14.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(top = 2.dp),
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                if (running) {
+                if (pinned) {
+                    Icon(
+                        imageVector = Glyphs.Pin,
+                        // Long-press is the gesture, not something a screen
+                        // reader can perform, so the row states the fact.
+                        contentDescription = "Pinned",
+                        modifier = Modifier.size(13.dp),
+                        tint = scheme.onSurface,
+                    )
+                } else if (running) {
                     // A live session is the one state worth colouring.
                     Box(
                         modifier = Modifier
@@ -163,18 +209,16 @@ internal fun SessionRow(
                 }
                 Text(
                     text = session.title?.takeIf { it.isNotBlank() } ?: "Untitled session",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                    color = scheme.onSurface,
                     // One line: a wrapped title is what made rows tall.
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            // 6dp: the title and its metadata read as one block, but at 2dp the
-            // folder/time line sat tight against the title.
+
             Spacer(Modifier.height(6.dp))
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -184,30 +228,29 @@ internal fun SessionRow(
                 session.location?.displayName?.takeIf { it.isNotBlank() }?.let { folder ->
                     Text(
                         text = folder,
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
                     )
                     Dot()
                 }
                 Text(
                     text = relativeTime(session.time.updated ?: session.time.created),
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant,
+                    maxLines = 1,
                 )
                 if (session.cost > 0.0) {
                     Dot()
+                    // Monospace: money is a number, and a column of proportional
+                    // digits does not line up.
                     Text(
                         text = "$${"%.2f".format(session.cost)}",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = CodeType.meta,
+                        color = scheme.onSurfaceVariant,
+                        maxLines = 1,
                     )
                 }
             }
@@ -217,8 +260,8 @@ internal fun SessionRow(
             Icon(
                 imageVector = Glyphs.Close,
                 contentDescription = "Delete session",
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.size(15.dp),
+                tint = scheme.onSurfaceVariant.copy(alpha = 0.7f),
             )
         }
     }
@@ -231,7 +274,6 @@ internal fun Dot() {
             .size(3.dp)
             .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f), CircleShape),
     )
-    Spacer(Modifier.width(0.dp))
 }
 
 /** Server timestamps are epoch milliseconds. */

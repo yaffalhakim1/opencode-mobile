@@ -90,5 +90,13 @@ internal object CodeType {
         fontSize = 13.sp,
         lineHeight = 20.sp,
     )
+
+    /** Money and ids sitting in a row of otherwise proportional metadata. */
+    val meta = TextStyle(
+        fontFamily = PlexMono,
+        fontWeight = FontWeight.Medium,
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+    )
 }
 

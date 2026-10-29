@@ -45,7 +45,7 @@ class OpenCodeApp : Application(), SingletonImageLoader.Factory {
             .build()
 }
 
-/** Manual dependency graph: one process, one client, no reflection. */
+/** Manual dependency graph: one process, one client */
 class AppContainer(application: Application) {
     val connectionStore: ConnectionStore = ConnectionStore(application)
     val settingsStore: SettingsStore = SettingsStore(application)

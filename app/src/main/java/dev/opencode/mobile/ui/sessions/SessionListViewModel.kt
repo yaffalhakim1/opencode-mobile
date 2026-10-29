@@ -8,6 +8,7 @@ import dev.opencode.mobile.data.remote.EventStream
 import dev.opencode.mobile.data.remote.OpenCodeApi
 import dev.opencode.mobile.data.remote.dto.ProjectDto
 import dev.opencode.mobile.data.remote.dto.SessionDto
+import dev.opencode.mobile.data.settings.SettingsStore
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,16 +37,19 @@ data class SessionsUiState(
     val loadingMore: Boolean = false,
     /** The event feed dropped, so what is shown may be behind. */
     val connectionLost: Boolean = false,
+    /** Session ids the user pinned, in no particular order. */
+    val pinned: Set<String> = emptySet(),
 ) {
     val isEmpty: Boolean get() = !isLoading && sessions.isEmpty() && error == null
 
     /** Sections after filtering and grouping. Empty when a filter hides everything. */
     fun sections(now: Long): List<SessionSection> =
-        SessionListShaper.apply(sessions, grouping, filter, query, running, now)
+        SessionListShaper.apply(sessions, grouping, filter, query, running, now, pinned)
 }
 class SessionListViewModel(
     private val api: OpenCodeApi,
     private val events: EventStream,
+    private val settings: SettingsStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SessionsUiState())
@@ -68,6 +72,9 @@ class SessionListViewModel(
     init {
         load(initial = true)
         feed.start()
+        viewModelScope.launch {
+            settings.pinnedSessions.collect { ids -> _state.update { it.copy(pinned = ids) } }
+        }
     }
 
     /**
@@ -200,6 +207,25 @@ class SessionListViewModel(
 
     fun setQuery(query: String) {
         _state.update { it.copy(query = query, expandedSections = emptySet()) }
+    }
+
+    /**
+     * Pins or unpins one session.
+     *
+     * Applied to the screen first and written second, like the theme: a pin is a
+     * local preference, so waiting for DataStore's commit would make the tap feel
+     * dropped. The store then emits the same set back, which changes nothing.
+     */
+    fun togglePin(sessionID: String) {
+        _state.update { current ->
+            val next = if (sessionID in current.pinned) {
+                current.pinned - sessionID
+            } else {
+                current.pinned + sessionID
+            }
+            current.copy(pinned = next, expandedSections = emptySet())
+        }
+        viewModelScope.launch { settings.togglePinned(sessionID) }
     }
 
     /** Reveals the rest of one section. */

@@ -39,6 +39,46 @@ object Glyphs {
     val ChevronRight: ImageVector = Icons.Filled.KeyboardArrowRight
     val Alert: ImageVector = Icons.Filled.Warning
 
+    /**
+     * A back arrow with a full-length shaft.
+     *
+     * The material `ArrowBack` has a stubby tail that reads as a chevron at the
+     * top of a screen; this one is drawn on the same grid as the rest of the
+     * family so the toolbar matches the glyphs inside the app.
+     */
+    val ArrowLeft: ImageVector = drawn("arrow-left") {
+        stroked {
+            moveTo(10.5f, 19.5f); lineTo(3f, 12f); lineTo(10.5f, 4.5f)
+        }
+        stroked {
+            moveTo(3f, 12f); lineTo(21f, 12f)
+        }
+    }
+
+    /** A tick, for the one row that is chosen. Round caps, like the family. */
+    val Tick: ImageVector = drawn("tick") {
+        stroked {
+            moveTo(4.5f, 12.75f); lineTo(10.5f, 18.75f); lineTo(19.5f, 5.25f)
+        }
+    }
+
+    /**
+     * A pushpin.
+     *
+     * Head, collar and needle in one family's stroke weight, so a pinned row reads
+     * at 16dp without becoming a filled blob next to the outline icons.
+     */
+    val Pin: ImageVector = drawn("pin") {
+        stroked {
+            moveTo(9f, 3.5f); lineTo(15f, 3.5f)
+            lineTo(15f, 9f); lineTo(17f, 12.5f)
+            lineTo(7f, 12.5f); lineTo(9f, 9f); close()
+        }
+        stroked {
+            moveTo(12f, 12.5f); lineTo(12f, 20.5f)
+        }
+    }
+
     val Stop: ImageVector = drawn("stop") {
         filled { addRect(7f, 7f, 17f, 17f) }
     }

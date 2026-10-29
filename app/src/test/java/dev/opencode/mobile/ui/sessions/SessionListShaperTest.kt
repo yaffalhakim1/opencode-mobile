@@ -32,7 +32,8 @@ class SessionListShaperTest {
         filter: SessionFilter = SessionFilter.All,
         query: String = "",
         running: Set<String> = emptySet(),
-    ) = SessionListShaper.apply(sessions, grouping, filter, query, running, now)
+        pinned: Set<String> = emptySet(),
+    ) = SessionListShaper.apply(sessions, grouping, filter, query, running, now, pinned)
 
     @Test
     fun `recency buckets split by age and skip empty ones`() {
@@ -167,5 +168,70 @@ class SessionListShaperTest {
 
         assertEquals(listOf("ports"), byProject.map { it.title })
         assertEquals(listOf("Today", "Older"), byUpdated.map { it.title })
+    }
+
+    @Test
+    fun `a pinned session is lifted into its own section first`() {
+        val sections = shape(
+            listOf(
+                session("fresh", ageMillis = hour),
+                session("starred", ageMillis = 3 * day),
+            ),
+            pinned = setOf("starred"),
+        )
+        assertEquals(listOf("Pinned", "Today"), sections.map { it.title })
+        assertEquals(listOf("starred"), sections.first().sessions.map { it.id })
+    }
+
+    @Test
+    fun `a pinned session is not also left in its bucket`() {
+        val sections = shape(
+            listOf(session("starred", ageMillis = hour), session("other", ageMillis = hour)),
+            pinned = setOf("starred"),
+        )
+        val all = sections.flatMap { it.sessions }.map { it.id }
+        assertEquals(all.size, all.toSet().size)
+        assertEquals(listOf("other"), sections.last().sessions.map { it.id })
+    }
+
+    @Test
+    fun `the pinned section is absent when nothing is pinned`() {
+        val sections = shape(listOf(session("a")))
+        assertEquals(listOf("Today"), sections.map { it.title })
+    }
+
+    @Test
+    fun `pinned filter keeps only pinned sessions`() {
+        val sections = shape(
+            listOf(session("a"), session("b")),
+            filter = SessionFilter.Pinned,
+            pinned = setOf("b"),
+        )
+        assertEquals(listOf("b"), sections.flatMap { it.sessions }.map { it.id })
+    }
+
+    @Test
+    fun `pinned filter with nothing pinned yields no sections`() {
+        val sections = shape(listOf(session("a")), filter = SessionFilter.Pinned)
+        assertTrue(sections.isEmpty())
+    }
+
+    @Test
+    fun `project grouping keeps pins above newer rows in the same project`() {
+        val sections = shape(
+            listOf(
+                session("newer", project = "ports", ageMillis = hour),
+                session("starred", project = "ports", ageMillis = 30 * day),
+            ),
+            grouping = SessionGrouping.Project,
+            pinned = setOf("starred"),
+        )
+        assertEquals(listOf("starred", "newer"), sections.single().sessions.map { it.id })
+    }
+
+    @Test
+    fun `a pin whose session is gone does not create a section`() {
+        val sections = shape(listOf(session("a")), pinned = setOf("deleted"))
+        assertEquals(listOf("Today"), sections.map { it.title })
     }
 }

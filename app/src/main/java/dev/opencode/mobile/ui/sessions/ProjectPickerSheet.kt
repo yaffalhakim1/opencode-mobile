@@ -1,6 +1,5 @@
 package dev.opencode.mobile.ui.sessions
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,6 +25,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.opencode.mobile.data.remote.dto.ProjectDto
 import dev.opencode.mobile.ui.components.Glyphs
+import dev.opencode.mobile.ui.components.panel
+import dev.opencode.mobile.ui.theme.CodeType
 
 /**
  * Chooses which project a new session belongs to.
@@ -57,30 +58,29 @@ fun ProjectPickerSheet(
         ) {
             Text(
                 text = "New session in",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
                 text = "The agent works inside this folder on your machine.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 2.dp, bottom = 12.dp),
+                modifier = Modifier.padding(top = 4.dp, bottom = 16.dp),
             )
 
             if (creating) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 24.dp),
-                    horizontalArrangement = Arrangement.Center,
+                        .padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                     Text(
                         text = "Starting…",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 12.dp),
                     )
                 }
             }
@@ -89,12 +89,13 @@ fun ProjectPickerSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 460.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 item {
                     ProjectRow(
                         title = "Server default",
                         subtitle = "Use whatever the server has open",
+                        mono = false,
                         onClick = { onPick(null) },
                         enabled = !creating,
                     )
@@ -104,12 +105,13 @@ fun ProjectPickerSheet(
                     ProjectRow(
                         title = project.displayName,
                         subtitle = project.canonical,
+                        mono = true,
                         onClick = { onPick(project) },
                         enabled = !creating,
                     )
                 }
 
-                item { Box(Modifier.size(24.dp)) }
+                item { Box(Modifier.size(16.dp)) }
             }
         }
     }
@@ -119,13 +121,21 @@ fun ProjectPickerSheet(
 private fun ProjectRow(
     title: String,
     subtitle: String,
+    /** Paths are machine strings; the default's sentence is not. */
+    mono: Boolean,
     onClick: () -> Unit,
     enabled: Boolean,
 ) {
+    val scheme = MaterialTheme.colorScheme
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), MaterialTheme.shapes.small)
+            .panel(
+                fill = scheme.surfaceContainerHigh,
+                border = scheme.outlineVariant.copy(alpha = 0.35f),
+                shape = MaterialTheme.shapes.large,
+            )
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -135,20 +145,25 @@ private fun ProjectRow(
             imageVector = Glyphs.Folder,
             contentDescription = null,
             modifier = Modifier.size(18.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = scheme.onSurfaceVariant,
         )
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                ),
+                color = scheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = if (mono) CodeType.meta else MaterialTheme.typography.bodySmall,
+                color = scheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
