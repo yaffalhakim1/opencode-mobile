@@ -25,6 +25,9 @@
       structure, the form watcher, the theme, session pagination, shared
       HTTP clients
 - [x] `@` mentions a file in the project and `/` mentions a skill
+- [x] `/` also lists the server's commands, and sending `/name args` runs it
+      through `/api/session/{id}/command` rather than as a prompt
+- [x] Code blocks and shell output have a Copy button in their footer
 - [x] Project scaffold, build, install, verified against the live server
 - [x] Theme rebuilt on the brand green (`#26E085` dark, `#00DA7D` light)
 - [x] Markdown rendering (GFM): headings, emphasis, strikethrough, inline code,

@@ -198,6 +198,28 @@ object Glyphs {
         }
     }
 
+    /**
+     * Two sheets, one behind the other — copy.
+     *
+     * `material-icons-core` has no copy glyph, and the extended set is a
+     * megabyte of vectors for one of them, so it is drawn with the rest of the
+     * family.
+     */
+    val Copy: ImageVector = drawn("copy") {
+        stroked {
+            // The back sheet: its top-left corner is what the front one is
+            // offset from, so the pair reads as two pages.
+            moveTo(8.5f, 4.5f); lineTo(19.5f, 4.5f)
+            lineTo(19.5f, 15.5f)
+        }
+        stroked {
+            moveTo(15.5f, 8.5f); lineTo(4.5f, 8.5f)
+            lineTo(4.5f, 19.5f)
+            lineTo(15.5f, 19.5f)
+            close()
+        }
+    }
+
     /** Magnifier — session search. */    val Search: ImageVector = drawn("search") {
         stroked {
             moveTo(11f, 4f)

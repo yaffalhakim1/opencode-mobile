@@ -8,6 +8,9 @@ import dev.opencode.mobile.core.net.OpenCodeException
 import dev.opencode.mobile.data.chat.AppliedMention
 import dev.opencode.mobile.data.chat.AttachmentPayload
 import dev.opencode.mobile.data.chat.ChatEntry
+import dev.opencode.mobile.data.chat.CommandInvocation
+import dev.opencode.mobile.data.chat.Commands
+import dev.opencode.mobile.data.chat.DELIVERY_QUEUE
 import dev.opencode.mobile.data.chat.MentionSpan
 import dev.opencode.mobile.data.chat.MentionTrigger
 import dev.opencode.mobile.data.chat.MentionedFile
@@ -177,17 +180,38 @@ class ChatViewModel(
                 _state.update { it.withMention(applied, file = file, skill = null) }
             }
 
-            is MentionSuggestion.Skill -> {
-                val text = "${Mentions.SKILL_MARKER}${suggestion.skill.name}"
-                val applied = Mentions.apply(current.composer.draft, trigger, text)
-                val skill = MentionedSkill(
-                    id = suggestion.skill.id,
-                    name = suggestion.skill.name,
-                    span = MentionSpan(applied.start, applied.end, text),
-                )
-                _state.update { it.withMention(applied, file = null, skill = skill) }
+            is MentionSuggestion.Entry -> {
+                if (Commands.isCommand(suggestion.entry)) {
+                    // A command is not an attachment: it is the message. So
+                    // choosing one closes the list and starts the line with
+                    // the command, leaving the arguments to be typed.
+                    val applied = Commands.insertion(suggestion.entry.name)
+                    _state.update { it.withPendingCommand(applied) }
+                } else {
+                    attachSkill(current, trigger, suggestion.entry.name, suggestion.entry.id)
+                }
             }
+
+            is MentionSuggestion.Skill ->
+                attachSkill(current, trigger, suggestion.skill.name, suggestion.skill.id)
         }
+    }
+
+    /** Puts a skill into the prompt as a mention the server attaches. */
+    private fun attachSkill(
+        current: ChatUiState,
+        trigger: MentionTrigger,
+        name: String,
+        id: String,
+    ) {
+        val text = "${Mentions.SKILL_MARKER}$name"
+        val applied = Mentions.apply(current.composer.draft, trigger, text)
+        val skill = MentionedSkill(
+            id = id,
+            name = name,
+            span = MentionSpan(applied.start, applied.end, text),
+        )
+        _state.update { it.withMention(applied, file = null, skill = skill) }
     }
 
     // ---- catalog and selection ---------------------------------------------
@@ -305,6 +329,16 @@ class ChatViewModel(
         _state.update { it.copy(error = null) }
 
         viewModelScope.launch {
+            // A line that starts with a registered command is the command, not
+            // a prompt that happens to contain a slash. It has to be decided
+            // before the draft is cleared, and it is sent through the command
+            // endpoint so the server can expand its template.
+            val invocation = Commands.invocation(text, mentions.catalog())
+            if (invocation != null) {
+                runCommand(current, invocation)
+                return@launch
+            }
+
             // The attachments are read before anything is cleared. A file that
             // cannot be read stays on screen and the user is told which one, so
             // a prompt never quietly goes out without a file that was attached
@@ -350,6 +384,49 @@ class ChatViewModel(
                         e.message ?: "Could not send the prompt.",
                     )
                 }
+            }
+        }
+    }
+
+    /**
+     * Runs a command and clears the composer.
+     *
+     * A command does not run beside a turn. The command endpoint takes no
+     * delivery field, so there is nothing to queue on — but the prompt
+     * endpoint does, and the server runs a prompt whose text is the command.
+     * So while a turn is running the command is queued as its own text line and
+     * the server expands it when the turn finishes. Sending it straight
+     * through would interleave a second turn with the one in flight.
+     */
+    private suspend fun runCommand(current: ChatUiState, invocation: CommandInvocation) {
+        val line = current.composer.draft.trim()
+        val queueing = current.timeline.isRunning
+
+        _state.update {
+            it.copy(
+                composer = it.composer.copy(draft = "", caret = 0),
+                // A queued command does not start a turn of its own; the one
+                // already running owns the timeline until it ends.
+                timeline = it.timeline.copy(isRunning = !queueing),
+            )
+        }
+        try {
+            if (queueing) {
+                sender.send(line, emptyList(), emptyList(), DELIVERY_QUEUE)
+                refreshInbox()
+            } else {
+                api.runCommand(sessionID, invocation.name, invocation.arguments)
+            }
+        } catch (e: Exception) {
+            _state.update {
+                it.copy(
+                    composer = it.composer.copy(
+                        draft = if (it.composer.draft.isBlank()) line else it.composer.draft,
+                        caret = if (it.composer.draft.isBlank()) line.length else it.composer.caret,
+                    ),
+                    timeline = it.timeline.copy(isRunning = queueing && it.timeline.isRunning),
+                    error = e.message ?: "Could not run /${invocation.name}.",
+                )
             }
         }
     }

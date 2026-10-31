@@ -3,12 +3,12 @@ package dev.opencode.mobile.data.chat
 /**
  * A mention the user is typing.
  *
- * `@` mentions a file in the project and `/` mentions a skill. The marker has
- * to be the first character of a word, so an email address or a path in the
- * middle of a sentence is not mistaken for one.
+ * `@` mentions a file in the project and `/` opens the server's commands and
+ * skills. The marker has to be the first character of a word, so an email
+ * address or a path in the middle of a sentence is not mistaken for one.
  */
 data class MentionTrigger(
-    /** The character that opened it: `@` for a file, `/` for a skill. */
+    /** The character that opened it: `@` for a file, `/` for a command or skill. */
     val marker: Char,
     /** The text typed after the marker, used to filter the list. */
     val query: String,
@@ -70,6 +70,15 @@ object Mentions {
 
     /** The character that mentions a skill. */
     const val SKILL_MARKER = '/'
+
+    /**
+     * The character that opens the `/` list: commands, and skills.
+     *
+     * The same key as [SKILL_MARKER] because the server models a skill as a
+     * command. One name for the key that the composer looks for, so a rename
+     * cannot leave the list opening for one and not the other.
+     */
+    const val SLASH_MARKER = SKILL_MARKER
 
     /**
      * Finds the mention being typed at the caret.

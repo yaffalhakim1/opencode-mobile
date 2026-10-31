@@ -88,8 +88,16 @@ internal fun MentionList(
                                 onClick = { onPick(suggestion) },
                             )
 
+                            is MentionSuggestion.Entry -> MentionRow(
+                                // The marker is part of the name, so the row
+                                // reads as the thing to type, not as a label.
+                                label = "/${suggestion.entry.name}",
+                                detail = suggestion.entry.description,
+                                onClick = { onPick(suggestion) },
+                            )
+
                             is MentionSuggestion.Skill -> MentionRow(
-                                label = suggestion.skill.name,
+                                label = "/${suggestion.skill.name}",
                                 detail = suggestion.skill.description,
                                 onClick = { onPick(suggestion) },
                             )
@@ -102,8 +110,12 @@ internal fun MentionList(
 }
 
 /** What the list is a list of. */
-private fun headerFor(state: MentionState): String =
-    if (state.suggestions.any { it is MentionSuggestion.Skill }) "Skills" else "Files in this project"
+private fun headerFor(state: MentionState): String = when {
+    state.suggestions.any { it is MentionSuggestion.File } -> "Files in this project"
+    // A command and a skill are both run with the same key, so they are one
+    // header rather than two lists that look alike.
+    else -> "Commands and skills"
+}
 
 @Composable
 private fun MentionHeader(text: String) {

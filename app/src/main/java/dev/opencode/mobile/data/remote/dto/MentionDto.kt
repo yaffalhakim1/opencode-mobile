@@ -47,6 +47,28 @@ data class SkillsPage(
     val data: List<SkillDto> = emptyList(),
 )
 
+/**
+ * A command the server has registered.
+ *
+ * A skill is one of these with `source = "skill"`, which is why `/` lists both
+ * from the same catalog. `template` is the prompt a command expands to; the
+ * client never fills it, because the server owns the arguments.
+ */
+@Serializable
+data class CommandDto(
+    val name: String = "",
+    val id: String = "",
+    val description: String = "",
+    val agent: String? = null,
+    val model: String? = null,
+    /** "command", "mcp" or "skill". Absent on servers that predate it. */
+    val source: String? = null,
+    val template: String = "",
+    val subtask: Boolean = false,
+    val hints: List<String> = emptyList(),
+    val hidden: Boolean = false,
+)
+
 /** A skill named in the prompt. */
 @Serializable
 data class PromptSkillDto(
