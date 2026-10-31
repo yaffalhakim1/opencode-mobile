@@ -4,6 +4,18 @@
 
 ### Android
 
+- **You can run a command, not just mention a skill.** `/` used to list skills
+  only, and sending `/something` went out as a prompt that attached a skill
+  named after it — so nothing ran. `/` now lists the server's commands too, and
+  picking one writes `/name ` with the caret after the space for its arguments.
+  Sending that line calls the command endpoint itself, so the server expands the
+  template instead of the phone guessing at it. A command sent while a turn is
+  running waits for that turn rather than running beside it.
+
+- **Code blocks can be copied.** Every fenced block and every shell result has a
+  Copy action in its footer, including when the block is collapsed — it copies
+  the whole thing, not the visible part.
+
 - **Fixed: the agent's work was one grey wall, so you could not tell what was
   still running.** Every reasoning step and tool call in a turn sat inside a
   single panel separated by hairlines, which left the step in flight looking

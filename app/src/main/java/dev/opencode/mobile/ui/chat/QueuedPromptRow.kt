@@ -67,6 +67,9 @@ internal fun QueuedPromptRow(
                 Text(
                     text = when {
                         prompt.steering -> "Steering — runs at the next step"
+                        // A command is not steered, so it says what it is
+                        // waiting for rather than how many files it has (none).
+                        prompt.command != null -> "Queued — waits for this turn"
                         prompt.attachments > 0 -> "Queued · ${prompt.attachments} file(s)"
                         else -> "Queued — waits for this turn"
                     },
@@ -76,8 +79,10 @@ internal fun QueuedPromptRow(
                 )
 
                 // Steering is the point of showing this row at all: it is how a
-                // correction reaches a turn that is already running.
-                if (!prompt.steering) {
+                // correction reaches a turn that is already running. A command
+                // is the one thing it must not do — running it beside the turn
+                // is what queueing it was meant to avoid.
+                if (!prompt.steering && prompt.command == null) {
                     IconButton(onClick = onSteer, modifier = Modifier.size(32.dp)) {
                         Icon(
                             imageVector = Glyphs.Send,

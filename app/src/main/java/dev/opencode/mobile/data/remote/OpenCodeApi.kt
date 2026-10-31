@@ -10,6 +10,7 @@ import dev.opencode.mobile.data.remote.dto.SkillDto
 import dev.opencode.mobile.data.remote.dto.SkillsPage
 import dev.opencode.mobile.data.remote.dto.AgentDto
 import dev.opencode.mobile.data.remote.dto.AgentsPage
+import dev.opencode.mobile.data.remote.dto.CommandDto
 import dev.opencode.mobile.data.remote.dto.DataEnvelope
 import dev.opencode.mobile.data.remote.dto.FormDto
 import dev.opencode.mobile.data.remote.dto.FormValueDto
@@ -172,6 +173,40 @@ class OpenCodeApi(
         return get("api/skill", parameters) { body ->
             json.decodeFromString(SkillsPage.serializer(), body).data
         }
+    }
+
+    /**
+     * The commands the server has registered for this project.
+     *
+     * This is the catalog `/` offers: it already contains the skills, marked
+     * with `source = "skill"`. The answer is a bare array rather than the
+     * `{ location, data }` envelope the other listings use.
+     */
+    suspend fun commands(directory: String?): List<CommandDto> {
+        val parameters = if (directory.isNullOrBlank()) {
+            emptyMap()
+        } else {
+            mapOf("location[directory]" to directory)
+        }
+        return get("api/command", parameters) { body ->
+            json.decodeFromString<List<CommandDto>>(body)
+        }
+    }
+
+    /**
+     * Runs a registered command.
+     *
+     * A command is not a prompt that happens to start with a slash: the server
+     * expands its template with the arguments, so the name and the arguments
+     * are two fields here. The call answers with the message it created rather
+     * than the `{ data }` envelope a prompt is admitted with.
+     */
+    suspend fun runCommand(sessionID: String, command: String, arguments: String) {
+        val payload = buildJsonObject {
+            put("command", command)
+            put("arguments", arguments)
+        }
+        post("api/session/$sessionID/command", payload) { }
     }
 
     suspend fun sendPrompt(

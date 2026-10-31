@@ -3,6 +3,11 @@
 A native Android client for a self-hosted [OpenCode](https://opencode.ai) server.
 Kotlin, Jetpack Compose, Material 3.
 
+New to Kotlin or Compose? [docs/learn/index.html](docs/learn/index.html) is an
+8-hour guided path through the concepts this app is built from, in dependency
+order. Open it in a browser; it is self-contained. The same chapters are also
+available as markdown in that folder.
+
 ## Why native
 
 The app is network-bound, so raw throughput was never the reason. The wins that
@@ -100,16 +105,42 @@ rejects a server-local path, which is the point: a phone cannot produce a
 path on the server's filesystem. Base64 inflates by ~33%, so the picker rejects
 anything over 8 MB before the request is built.
 
-**Mentions.** Typing `@` in the composer searches the project for files, and
-`/` lists the skills the server has registered. Picking one puts it in the
-prompt text and attaches it: a mentioned file goes to the server as a `file:`
-URI pointing at the server's own filesystem, so the bytes never travel, while
-a mentioned skill is named by its id. Both carry the span of the prompt text
-they cover, so the server knows which characters the file or skill was named
-at — and a mention added later moves the ones that were already there.
+**Mentions and commands.** Typing `@` in the composer searches the project for
+files, and `/` lists what the server can be asked to do: its commands and its
+skills. Picking a file puts it in the prompt text and attaches it as a `file:`
+URI pointing at the server's own filesystem, so the bytes never travel; a
+mentioned skill is named by its id. Both carry the span of the prompt text they
+cover, so the server knows which characters the file or skill was named at —
+and a mention added later moves the ones that were already there.
+
+A **command** is not a mention. The server models it as a command whose
+`source` is `"command"` (or `"mcp"`); a skill is the same shape with
+`source = "skill"`. They are different calls: a skill is attached to a prompt,
+a command replaces it. So picking a command inserts `/name ` into the draft and
+leaves the caret after the space, and sending that draft goes to
+`POST /api/session/{id}/command` with the name and the arguments split apart —
+never to the prompt endpoint, which would have attached a skill named after the
+command instead. The rest of the first line is the arguments, and any later
+lines are kept as more of them. A server without `source` is read by id: a
+command's id is its name, a skill's is a path under `skills/`.
+
+**A command queues like a prompt.** The command endpoint has no delivery field,
+so it cannot hold a command back on its own. While a turn is running the
+command is therefore sent to the prompt endpoint as its own `/name args` line
+with `delivery = "queue"` and runs when the turn finishes; an idle session uses
+the command endpoint directly. A queued command shows in the inbox like any
+queued prompt, but without the "send now" action: steering it into the running
+turn is the interleaving that queueing exists to prevent.
 
 The marker has to start a word, so an email address or a path in the middle of
 a sentence does not open the list.
+
+**Copying code.** Every fenced code block, and every shell result, has a Copy
+action in its footer. It copies the whole block rather than the clamped part,
+so the "show N more lines" control is about reading and never truncates what
+lands on the clipboard. The action confirms in place ("Copied", 1.6 s) instead
+of raising a toast: a toast at the bottom of the screen sits under the keyboard
+the user is about to type with.
 
 **Jump to bottom.** The timeline follows the tail only while the agent is
 streaming. Scrolling up stops the follow and shows a button; the button (or
@@ -240,12 +271,14 @@ worth it for a feature that must work on the first try.
 | `DELETE` | `/api/session/{id}` |
 | `GET` | `/api/session/{id}/message` — history |
 | `POST` | `/api/session/{id}/prompt` — send (text + `files` + `skills`) |
+| `POST` | `/api/session/{id}/command` — run a registered command (`command` + `arguments`) |
 | `POST` | `/api/session/{id}/interrupt` — stop |
 | `POST` | `/api/session/{id}/agent` — switch agent |
 | `POST` | `/api/session/{id}/model` — switch model and effort |
 | `GET` | `/api/agent` — agent catalog |
 | `GET` | `/api/model` — model catalog and variants |
 | `GET` | `/api/skill` — skills, for `/` mentions |
+| `GET` | `/api/command` — commands and skills, for `/` (a bare array, not `{ location, data }`) |
 | `GET` | `/api/fs/find` — files, for `@` mentions |
 | `GET` | `/api/fs/read/*` — one file's bytes, for images in a reply |
 | `GET` | `/api/event` — SSE |

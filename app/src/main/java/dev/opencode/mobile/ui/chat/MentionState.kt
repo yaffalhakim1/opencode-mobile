@@ -3,17 +3,22 @@ package dev.opencode.mobile.ui.chat
 import dev.opencode.mobile.data.chat.MentionedFile
 import dev.opencode.mobile.data.chat.MentionedSkill
 import dev.opencode.mobile.data.chat.MentionTrigger
+import dev.opencode.mobile.data.remote.dto.CommandDto
 import dev.opencode.mobile.data.remote.dto.FileEntryDto
 import dev.opencode.mobile.data.remote.dto.SkillDto
 
 /**
  * One entry in the mention list.
  *
- * A file and a skill are both something the user can name in the prompt, so
- * they are one list to the screen and one choice to make.
+ * A file, a command and a skill are all something the user can name in the
+ * prompt, so they are one list to the screen and one choice to make.
  */
 sealed interface MentionSuggestion {
     data class File(val entry: FileEntryDto) : MentionSuggestion
+
+    /** A command or a skill from `/`; which one it is lives in its source. */
+    data class Entry(val entry: CommandDto) : MentionSuggestion
+
     data class Skill(val skill: SkillDto) : MentionSuggestion
 }
 

@@ -22,25 +22,34 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.opencode.mobile.ui.theme.CodeType
 import dev.opencode.mobile.ui.theme.extendedColors
+import kotlinx.coroutines.delay
 
 /**
  * Collapsible monospace surface for tool output and shell results.
  *
  * Long output is clamped with an explicit "show all" affordance rather than an
  * inner scroll region: nested scrolling inside a `LazyColumn` traps gestures.
+ * The copy action sits in the footer rather than floating over the text, so it
+ * is reachable whether the block is clamped or expanded, and it never covers
+ * the first characters of a line — which is exactly the part of code that
+ * matters.
  */
 @Composable
 fun CodeBlock(
@@ -82,18 +91,77 @@ fun CodeBlock(
             style = CodeType.block,
             color = MaterialTheme.colorScheme.onSurface,
         )
-        if (isLong) {
-            Text(
-                text = if (expanded) "Show less" else "Show ${lines.size - collapsedLines} more lines",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .padding(top = 8.dp)
-                    .clickable { expanded = !expanded },
-            )
+        // The whole block is copied, not the clamped part: what the user wants
+        // is the code, and the "show N more lines" is about reading it.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (isLong) {
+                Text(
+                    text = if (expanded) "Show less" else "Show ${lines.size - collapsedLines} more lines",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { expanded = !expanded },
+                )
+            } else {
+                Spacer(Modifier.weight(1f))
+            }
+            CopyAction(text = text)
         }
     }
 }
+
+/**
+ * Copies a block to the clipboard and says so.
+ *
+ * The confirmation is a word rather than a toast: a toast at the bottom of the
+ * screen is under the keyboard the user is about to type with, and "Copied"
+ * next to the button that was tapped needs no interpretation.
+ */
+@Composable
+private fun CopyAction(text: String) {
+    val clipboard = LocalClipboardManager.current
+    var copied by remember(text) { mutableStateOf(false) }
+
+    LaunchedEffect(copied) {
+        if (!copied) return@LaunchedEffect
+        delay(COPIED_LABEL_MS)
+        copied = false
+    }
+
+    Row(
+        modifier = Modifier
+            // A label is a small target; the padding makes the whole pill
+            // tappable without making it taller than the block's footer.
+            .clip(MaterialTheme.shapes.extraSmall)
+            .clickable {
+                clipboard.setText(AnnotatedString(text))
+                copied = true
+            }
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Icon(
+            imageVector = if (copied) Glyphs.Check else Glyphs.Copy,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
+            tint = if (copied) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = if (copied) "Copied" else "Copy",
+            style = MaterialTheme.typography.labelSmall,
+            color = if (copied) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** How long "Copied" stays on the button. */
+private const val COPIED_LABEL_MS = 1_600L
 
 /**
  * A one-line collapsible header, used by reasoning and tool rows.

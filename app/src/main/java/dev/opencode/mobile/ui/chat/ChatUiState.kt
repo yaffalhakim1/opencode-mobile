@@ -154,6 +154,15 @@ internal fun ChatUiState.restoreAfterFailedSend(
     error = message,
 )
 
+internal fun ChatUiState.withPendingCommand(applied: AppliedMention): ChatUiState = copy(
+    composer = composer.copy(draft = applied.text, caret = applied.caret),
+    mention = mention.copy(
+        trigger = null,
+        suggestions = emptyList(),
+        loading = false,
+    ),
+)
+
 /** The selection the composer shows. */
 internal fun ChatUiState.withSelection(picked: ChatSelection): ChatUiState =
     copy(composer = composer.copy(selection = picked))
